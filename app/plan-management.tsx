@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { addDays, duration, today } from "@/lib/planner";
+import { deadlineText } from "@/lib/deadline-i18n";
 import type { ReadingState } from "@/lib/state";
 import { text, type Lang } from "@/lib/i18n";
 import { planText, fill } from "@/lib/plan-i18n";
@@ -18,21 +18,20 @@ export default function PlanManagement({
   lang,
   busy,
   mutate,
+  onEditDeadline,
 }: {
   state: ReadingState;
   lang: Lang;
   busy: boolean;
+  onEditDeadline: () => void;
   mutate: (op: Record<string, unknown>) => Promise<ReadingState | null>;
 }) {
   const fixed = isBible52(state.config),
     f = bible52Text(lang);
   const p = planText(lang),
     t = text(lang);
-  const [mode, setMode] = useState<"previous" | "deadline" | null>(null),
-    [previous, setPrevious] = useState<number[]>([]),
-    [end, setEnd] = useState("");
-  const currentEnd = addDays(state.config.start, duration(state.config) - 1);
-  const minimumEnd = [currentEnd, today(state.config.timezone)].sort().at(-1)!;
+  const [mode, setMode] = useState<"previous" | null>(null),
+    [previous, setPrevious] = useState<number[]>([]);
   return (
     <section className="panel settings-card">
       <h2>{p.manage}</h2>
@@ -56,13 +55,10 @@ export default function PlanManagement({
         {!fixed && (
           <button
             className="secondary"
-            disabled={busy || !!state.timer}
-            onClick={() => {
-              setEnd(addDays(minimumEnd, 30));
-              setMode("deadline");
-            }}
+            disabled={busy}
+            onClick={onEditDeadline}
           >
-            {p.extend}
+            {deadlineText(lang).edit}
           </button>
         )}
       </div>
@@ -76,94 +72,54 @@ export default function PlanManagement({
         }}
       >
         <DialogContent className="plan-management-dialog">
-          <DialogTitle>
-            {mode === "previous" ? p.editPrevious : p.extend}
-          </DialogTitle>
+          <DialogTitle>{p.editPrevious}</DialogTitle>
           <DialogDescription>
-            {mode === "previous"
-              ? fixed
-                ? f.progressHelp
-                : p.previousEditHelp
-              : p.extendHelp}
+            {fixed ? f.progressHelp : p.previousEditHelp}
           </DialogDescription>
-          {mode === "previous" ? (
-            <>
-              {fixed ? (
-                <Bible52Weeks
-                  value={previous}
-                  onChange={setPrevious}
-                  lang={lang}
-                  locked={Object.keys(state.done).map(Number)}
-                  disabled={busy}
-                />
-              ) : (
-                <PreviousPicker
-                  config={state.config}
-                  value={previous}
-                  onChange={setPrevious}
-                  lang={lang}
-                  locked={Object.keys(state.done).map(Number)}
-                  disabled={busy}
-                />
-              )}
-              <div className="wizard-actions">
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() => setMode(null)}
-                >
-                  {t.cancel}
-                </button>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={async () => {
-                    if (
-                      await mutate({
-                        action: "previous",
-                        previouslyRead: previous,
-                      })
-                    )
-                      setMode(null);
-                  }}
-                >
-                  {busy ? t.saving : t.save}
-                </button>
-              </div>
-            </>
-          ) : (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (await mutate({ action: "deadline", end })) setMode(null);
-              }}
-            >
-              <label htmlFor="plan-end">{p.endDate}</label>
-              <input
-                id="plan-end"
-                type="date"
-                required
-                min={minimumEnd}
-                max={addDays(state.config.start, 3649)}
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
+          <>
+            {fixed ? (
+              <Bible52Weeks
+                value={previous}
+                onChange={setPrevious}
+                lang={lang}
+                locked={Object.keys(state.done).map(Number)}
                 disabled={busy}
               />
-              <div className="wizard-actions">
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() => setMode(null)}
-                >
-                  {t.cancel}
-                </button>
-                <button className="primary" disabled={busy}>
-                  {busy ? t.saving : t.save}
-                </button>
-              </div>
-            </form>
-          )}
+            ) : (
+              <PreviousPicker
+                config={state.config}
+                value={previous}
+                onChange={setPrevious}
+                lang={lang}
+                locked={Object.keys(state.done).map(Number)}
+                disabled={busy}
+              />
+            )}
+            <div className="wizard-actions">
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => setMode(null)}
+              >
+                {t.cancel}
+              </button>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    await mutate({
+                      action: "previous",
+                      previouslyRead: previous,
+                    })
+                  )
+                    setMode(null);
+                }}
+              >
+                {busy ? t.saving : t.save}
+              </button>
+            </div>
+          </>
         </DialogContent>
       </Dialog>
     </section>

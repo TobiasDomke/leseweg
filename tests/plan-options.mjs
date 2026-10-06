@@ -238,7 +238,12 @@ const resumed = act(
 assert.equal(resumed.adaptive.unplanned.length, 0);
 assert.equal(resumed.adaptive.days.slice(7).flat().length, 259);
 assert.deepEqual(resumed.done, overdue.done);
-assert.throws(() => act(resumed, { action: "deadline", end: "2026-11-01" }));
+const shortened = act(resumed, { action: "deadline", end: "2026-11-01" });
+assert.equal(
+  addDays(shortened.config.start, duration(shortened.config) - 1),
+  "2026-11-01",
+);
+assert.deepEqual(shortened.done, resumed.done);
 assert.throws(() => fresh({ ...base, scope: "nt" }, [0]));
 assert.throws(() => fresh(base, [0, 0]));
 assert.throws(() => fresh({ ...base, scope: "invalid" }));

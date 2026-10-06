@@ -506,3 +506,37 @@ spaltenweisen Erfassung der Vorlage, prüft jedes Buch gegen das Schlachter-Inve
 und liest alle Abschnitte in umgekehrter Reihenfolge mit Timer durch. Weitere
 Prüfungen umfassen Sprachwechsel, Teilfortschritt, unveränderte Wochen nach
 verstrichenem Zieltermin, Sicherungsvalidierung und Schutz vor alten Clients.
+
+
+## Update 1.11: feste Zieltermine und anpassbare Ziele
+
+Im Einrichtungsschritt **Zeitraum & Vorschau** stehen **Dauer** (Tage, Wochen,
+Monate) und **Festes Zieldatum** zur Wahl. Der konkrete Zieltag ist einschließlich
+als Lesetag eingeplant. Kalenderrechnungen bleiben von Sommerzeitwechseln
+unabhängig. Das gespeicherte Format bleibt mit bestehenden Sicherungen kompatibel.
+
+Bei individuellen Plänen öffnet das antippbare **Ziel** auf der Startseite und
+im Leseplan denselben Dialog wie **Einstellungen → Zieldatum ändern**. Termine
+lassen sich vorziehen oder nach hinten verschieben. Eine Vorschau zeigt die
+verbleibenden Kapitel, Tage und geschätzten Minuten pro Tag. Verlauf, persönliche
+Messungen und vorheriger Fortschritt bleiben erhalten. Ein laufender Timer muss
+vor dem Speichern pausiert werden. Ein Ziel darf nicht vor heute, dem Planstart
+oder einer bereits aufgezeichneten Einheit liegen. Das Limit bleibt 3.650 Tage
+ab Planstart. Bei einem neuen Ziel heute werden die offenen Kapitel wieder für
+heute eingeplant, auch wenn bereits eine heutige Sitzung beendet wurde.
+
+Die vorhandene dynamische Verteilung wurde zusätzlich geprüft: Nach verpassten
+Tagen verteilt sich der gesamte ungelesene Rest nach Textlänge über die noch
+verfügbaren Tage. Beim Abschließen einer Leseeinheit werden zusätzliche gelesene
+Kapitel aus sämtlichen zukünftigen Empfehlungen entfernt. Kein zukünftiger Tag
+wird dadurch als erledigt markiert. Wiederholtes Mehrlesen senkt die verbleibende
+Gesamtmenge und beeinflusst alle folgenden Tage. Ein abgelaufener Zieltermin wird
+weiterhin ausdrücklich angezeigt und nicht ungefragt verschoben.
+
+**Bibelleseplan 52** bleibt entsprechend seiner Vorlage fest eingeteilt und ist
+von der Änderung des Zieltermins ausgenommen.
+
+`tests/deadlines.mjs` prüft inklusive Daten, Schaltjahr/Sommerzeit, 108 Kombinationen
+von Ausgaben, Umfang, Reihenfolge und früheren/späteren Zielen, verpasste Tage,
+mehrfaches Mehrlesen, den Abschluss heute, pausierte Zeitmessungen, erhaltene
+Sicherungen und den Schutz der festen 52-Wochen-Vorlage.

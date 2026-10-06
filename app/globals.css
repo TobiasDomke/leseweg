@@ -1928,3 +1928,61 @@ a:focus-visible {
   min-width: 0;
   line-height: 1.5;
 }
+
+.deadline-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.deadline-mode legend {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.deadline-mode .plan-choice {
+  flex: 1 1 150px;
+  margin: 0;
+  min-width: 0;
+}
+.goal-chip.goal-edit {
+  cursor: pointer;
+  white-space: normal;
+  text-align: left;
+  max-width: 100%;
+  line-height: 1.5;
+}
+.goal-edit svg,
+.goal-link svg {
+  flex-shrink: 0;
+}
+.goal-edit:hover {
+  background: var(--accent);
+}
+.goal-link {
+  margin: 0 0 12px;
+  text-align: left;
+}
+.deadline-dialog {
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+.deadline-dialog form {
+  min-width: 0;
+  margin-top: 4px;
+}
+.deadline-dialog .wizard-actions {
+  flex-wrap: wrap;
+}
+.deadline-dialog .wizard-actions button {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+.deadline-preview {
+  background: var(--secondary);
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 18px;
+}
+.deadline-preview p {
+  margin: 6px 0 0;
+}

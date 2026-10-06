@@ -1,3 +1,4 @@
+import { rescheduleDeadline } from "./deadline";
 import { sessionsFor, logDate } from "./session-stats";
 import { changeEdition } from "./edition-migration";
 import { editionIds, editions, languageEdition } from "./editions";
@@ -12,8 +13,6 @@ import {
   createPlan,
   today,
   scopeChapters,
-  duration,
-  dateAt,
   addDays,
 } from "./planner";
 import {
@@ -21,7 +20,6 @@ import {
   dayIndex,
   redistribute,
   nextExtraChapter,
-  completionDay,
 } from "./adaptive";
 import type { ReadingState } from "./state";
 import {
@@ -314,36 +312,7 @@ export function applyAction(
       );
     }
     if (op.action === "deadline") {
-      if (state.timer) throw Error("timer");
-      if (op.end < date || op.end < days.at(-1)!.date) throw Error("invalid");
-      const config = {
-        ...state.config,
-        unit: "days" as const,
-        amount:
-          Math.round(
-            (dateAt(op.end).getTime() - dateAt(state.config.start).getTime()) /
-              86400000,
-          ) + 1,
-      };
-      if (
-        !Number.isFinite(config.amount) ||
-        dateAt(op.end).toISOString().slice(0, 10) !== op.end
-      )
-        throw Error("invalid");
-      duration(config);
-      state.completionDays = Object.fromEntries(
-        Object.keys(state.done).map((id) => [
-          id,
-          completionDay(state!, Number(id)),
-        ]),
-      );
-      state.config = config;
-      const newDay = dayIndex(config, date);
-      redistribute(
-        state,
-        newDay + (state.adaptive!.finished.includes(newDay) ? 1 : 0),
-        date,
-      );
+      state = rescheduleDeadline(state, op.end, date);
     }
     if (op.action === "chapter") {
       if (

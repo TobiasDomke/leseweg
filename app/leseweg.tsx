@@ -82,6 +82,8 @@ import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
 import Bible52Weeks from "./bible52-weeks";
 import { bible52Text, bible52Position } from "@/lib/bible52-i18n";
 import PlannerForm from "./planner-form";
+import DeadlineDialog from "./deadline-dialog";
+import { deadlineText } from "@/lib/deadline-i18n";
 import PlanManagement from "./plan-management";
 import ReadingContext from "./reading-context";
 import BookOrderControl from "./book-order-control";
@@ -121,6 +123,7 @@ export default function Leseweg({
     [offline, setOffline] = useState(false),
     [reset, setReset] = useState(false),
     [newPlan, setNewPlan] = useState(false),
+    [changingDeadline, setChangingDeadline] = useState(false),
     [editing, setEditing] = useState(false),
     [finishing, setFinishing] = useState(false),
     [correctMinutes, setCorrectMinutes] = useState("0"),
@@ -148,7 +151,8 @@ export default function Leseweg({
       7 * 86400000;
   const fixed = !!state && isBible52(state.config),
     f = bible52Text(lang);
-  const p = planText(lang);
+  const p = planText(lang),
+    deadline = deadlineText(lang);
   const t = text(lang),
     names = bookNames(fixed ? "de" : lang),
     pending = useRef(false),
@@ -613,17 +617,19 @@ export default function Leseweg({
         )}
         {message && (
           <p className="notice" role="status">
-            {message === "saved"
-              ? t.saved
-              : message === "replanned"
-                ? t.replanned +
-                  (remainingDays > 0 && remainingChapters > 0
-                    ? " " +
-                      fill(p.workload, {
-                        minutes: estimate(remainingWords / remainingDays),
-                      })
-                    : "")
-                : t.timerStopped}
+            {message === "deadline"
+              ? deadline.saved
+              : message === "saved"
+                ? t.saved
+                : message === "replanned"
+                  ? t.replanned +
+                    (remainingDays > 0 && remainingChapters > 0
+                      ? " " +
+                        fill(p.workload, {
+                          minutes: estimate(remainingWords / remainingDays),
+                        })
+                      : "")
+                  : t.timerStopped}
           </p>
         )}
         {status === "loading" ? (
@@ -750,12 +756,24 @@ export default function Leseweg({
                       : p[state.config.scope ?? "bible"]}
                   </p>
                 </div>
-                <div className={`goal-chip ${fixed ? "bible52-goal" : ""}`}>
-                  <CalendarDays size={16} />
-                  {fixed
-                    ? f.description
-                    : `${t.target} · ${fmt(days.at(-1)!.date, true)}`}
-                </div>
+                {fixed ? (
+                  <div className="goal-chip bible52-goal">
+                    <CalendarDays size={16} />
+                    {f.description}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="goal-chip goal-edit"
+                    disabled={busy}
+                    aria-label={`${deadline.edit}: ${fmt(days.at(-1)!.date, true)}`}
+                    onClick={() => setChangingDeadline(true)}
+                  >
+                    <CalendarDays size={16} />
+                    {t.target} · {fmt(days.at(-1)!.date, true)}
+                    <Pencil size={14} />
+                  </button>
+                )}
               </div>
               {!fixed && days[0].date > currentDate && (
                 <p className="notice">
@@ -1112,9 +1130,22 @@ export default function Leseweg({
             </TabsContent>
             <TabsContent value="plan">
               <div className="page-heading">
-                <span className="eyebrow">
-                  {t.target}: {fmt(days.at(-1)!.date, true)}
-                </span>
+                {fixed ? (
+                  <span className="eyebrow">
+                    {t.target}: {fmt(days.at(-1)!.date, true)}
+                  </span>
+                ) : (
+                  <button
+                    className="text-button goal-link"
+                    disabled={busy}
+                    onClick={() => setChangingDeadline(true)}
+                    aria-label={`${deadline.edit}: ${fmt(days.at(-1)!.date, true)}`}
+                  >
+                    {t.target}: {fmt(days.at(-1)!.date, true)}
+                    <Pencil size={14} />
+                  </button>
+                )}
+
                 <h1>{t.plan}</h1>
                 <p>
                   {fixed
@@ -1541,6 +1572,7 @@ export default function Leseweg({
                     />
                   )}
                   <PlanManagement
+                    onEditDeadline={() => setChangingDeadline(true)}
                     state={state}
                     lang={lang}
                     busy={busy}
@@ -1641,6 +1673,27 @@ export default function Leseweg({
           <span>{t.footer}</span>
         </footer>
       </main>
+      {changingDeadline && state && !fixed && (
+        <DeadlineDialog
+          state={state}
+          lang={lang}
+          busy={busy}
+          onClose={() => setChangingDeadline(false)}
+          onSave={async (end) => {
+            const updated = await mutate({ action: "deadline", end });
+            if (updated) {
+              setSelected(null);
+              setPage(
+                Math.floor(
+                  dayIndex(updated.config, today(updated.config.timezone)) / 14,
+                ),
+              );
+              setMessage("deadline");
+            }
+            return updated;
+          }}
+        />
+      )}
       <AlertDialog open={reset} onOpenChange={setReset}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,4 +1,6 @@
 "use client";
+import { planEndingOn } from "@/lib/deadline";
+import { deadlineText } from "@/lib/deadline-i18n";
 import { languageEdition, editionName } from "@/lib/editions";
 import { experienceText } from "@/lib/experience-i18n";
 import { useMemo, useRef, useState } from "react";
@@ -6,6 +8,7 @@ import { BookOpen, CalendarDays, Sparkles, CircleCheck } from "lucide-react";
 import {
   isBible52,
   bible52Config,
+  addDays,
   createPlan,
   scopeChapters,
   today,
@@ -34,7 +37,10 @@ export default function PlannerForm({
 }) {
   const t = text(lang),
     p = planText(lang),
-    f = bible52Text(lang);
+    f = bible52Text(lang),
+    d = deadlineText(lang);
+  const [dateMode, setDateMode] = useState(false),
+    [end, setEnd] = useState("");
   const [step, setStep] = useState(0),
     [previouslyRead, setPrevious] = useState<number[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -68,11 +74,17 @@ export default function PlannerForm({
   const items = scopeChapters(config);
   const computed = useMemo(() => {
     try {
-      return { days: createPlan(config, previouslyRead), error: "" };
+      return {
+        days: createPlan(
+          !fixed && dateMode ? planEndingOn(config, end) : config,
+          previouslyRead,
+        ),
+        error: "",
+      };
     } catch {
       return { days: [], error: t.invalid };
     }
-  }, [config, previouslyRead, t.invalid]);
+  }, [config, previouslyRead, t.invalid, fixed, dateMode, end]);
   const remainingWords = computed.days.reduce((sum, day) => sum + day.words, 0);
   const estimate = (words: number) =>
     estimatedMinutes(words, readingPace(null));
@@ -124,12 +136,18 @@ export default function PlannerForm({
             if (step < 2) move(step + 1);
             else {
               // Native date controls can commit on blur; submit their visible value.
-              const start = new FormData(e.currentTarget).get("start");
-              const submitted = {
+              const data = new FormData(e.currentTarget);
+              const start = data.get("start");
+              let submitted = {
                 ...config,
                 start: typeof start === "string" ? start : config.start,
               };
               try {
+                if (!fixed && dateMode)
+                  submitted = planEndingOn(
+                    submitted,
+                    String(data.get("end") ?? end),
+                  );
                 createPlan(submitted, previouslyRead);
                 onSave(submitted, previouslyRead);
               } catch {
@@ -151,6 +169,7 @@ export default function PlannerForm({
                         checked={fixed === value}
                         onChange={() => {
                           setPrevious([]);
+                          setDateMode(false);
                           setConfig(
                             value
                               ? bible52Config(config)
@@ -308,34 +327,81 @@ export default function PlannerForm({
               <>
                 {!fixed && (
                   <>
-                    <label htmlFor="amount">{p.period}</label>
-                    <div className="duration-row">
-                      <input
-                        id="amount"
-                        type="number"
-                        min="1"
-                        max="3650"
-                        required
-                        value={config.amount || ""}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            amount: Number(e.target.value),
-                          })
-                        }
-                      />
-                      <select
-                        aria-label={p.period}
-                        value={config.unit}
-                        onChange={(e) =>
-                          setConfig({ ...config, unit: e.target.value as Unit })
-                        }
-                      >
-                        <option value="days">{t.days}</option>
-                        <option value="weeks">{t.weeks}</option>
-                        <option value="months">{t.months}</option>
-                      </select>
-                    </div>
+                    <fieldset className="deadline-mode">
+                      <legend>{d.mode}</legend>
+                      {[false, true].map((value) => (
+                        <label className="plan-choice" key={String(value)}>
+                          <input
+                            type="radio"
+                            name="goal-mode"
+                            checked={dateMode === value}
+                            onChange={() => {
+                              if (value && !end)
+                                setEnd(
+                                  computed.days.at(-1)?.date ?? config.start,
+                                );
+                              setDateMode(value);
+                            }}
+                          />
+                          <span>{value ? d.date : d.duration}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    {dateMode ? (
+                      <>
+                        <label htmlFor="target-date">{d.end}</label>
+                        <input
+                          id="target-date"
+                          name="end"
+                          type="date"
+                          required
+                          min={config.start}
+                          max={
+                            Number.isFinite(dateAt(config.start).getTime())
+                              ? addDays(config.start, 3649)
+                              : undefined
+                          }
+                          value={end}
+                          onInput={(e) => setEnd(e.currentTarget.value)}
+                          onChange={(e) => setEnd(e.target.value)}
+                        />
+                        <p className="fineprint">{d.inclusive}</p>
+                      </>
+                    ) : (
+                      <>
+                        <label htmlFor="amount">{p.period}</label>
+                        <div className="duration-row">
+                          <input
+                            id="amount"
+                            type="number"
+                            min="1"
+                            max="3650"
+                            required
+                            value={config.amount || ""}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                amount: Number(e.target.value),
+                              })
+                            }
+                          />
+                          <select
+                            aria-label={p.period}
+                            value={config.unit}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                unit: e.target.value as Unit,
+                              })
+                            }
+                          >
+                            <option value="days">{t.days}</option>
+                            <option value="weeks">{t.weeks}</option>
+                            <option value="months">{t.months}</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
                 <label htmlFor="start">{fixed ? f.start : t.startDate}</label>
@@ -362,7 +428,7 @@ export default function PlannerForm({
                     <p>
                       <strong>{t.balanced}</strong>
                       <br />
-                      {t.balancedSub}
+                      {d.balanced}
                     </p>
                   </div>
                 )}
