@@ -1,4 +1,4 @@
-import { passage, chapters } from "./planner";
+import { passage, scopeChapters } from "./planner";
 import { planText } from "./plan-i18n";
 import { readingPace, estimatedMinutes } from "./pace";
 import { bookNames, text, type Lang } from "./i18n";
@@ -102,7 +102,9 @@ export function csvFile(state: ReadingState, lang: Lang) {
   const pace = readingPace(state);
   const t = text(lang),
     names = bookNames(lang);
-  const previous = (state.previouslyRead ?? []).map((id) => chapters[id]);
+  const previous = scopeChapters(state.config).filter((c) =>
+    state.previouslyRead?.includes(c.id),
+  );
   const rows = [
     [t.day, t.startDate, t.chapters, t.estimate, t.measured, t.read],
     ...(previous.length

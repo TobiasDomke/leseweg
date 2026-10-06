@@ -1,5 +1,6 @@
 import type { Config } from "./planner";
 import type { Lang } from "./i18n";
+import type { BookOrder } from "./book-order";
 export type TimeLog = { day: number; seconds: number; at: string };
 export type PaceSample = { day: number; chapters: number[]; seconds: number };
 export type PaceState = {
@@ -15,6 +16,8 @@ export type ReadingState = {
   id: string;
   config: Config;
   lang: Lang;
+  // Apply a language-driven order change after the active timer pauses/ends.
+  pendingBookOrder?: BookOrder;
   done: Record<string, string>;
   previouslyRead?: number[];
   // Keep completed units stable when a formerly expired plan is extended.

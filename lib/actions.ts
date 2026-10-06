@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { languageCodes } from "./languages";
+import { bookOrders, languageBookOrder } from "./book-order";
 import { createPlan, today, scopeChapters, duration, dateAt } from "./planner";
 import {
   prepareState,
@@ -21,6 +22,8 @@ export const configSchema = z
     scope: z.enum(["bible", "ot", "nt"]).optional(),
     order: z.enum(["canonical", "chronological", "mixed"]).optional(),
     keepTogether: z.boolean().optional(),
+    bookOrder: z.enum(bookOrders).optional(),
+    bookOrderMode: z.enum(["auto", "manual"]).optional(),
     amount: z.number().int().min(1).max(3650),
     unit: z.enum(["days", "weeks", "months"]),
     start: z.string(),
@@ -43,6 +46,23 @@ export const previousSchema = z
   .max(1189)
   .refine((ids) => new Set(ids).size === ids.length);
 const requestSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("language"),
+      lang: z.enum(languageCodes),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("book-order"),
+      choice: z.enum(["auto", ...bookOrders]),
+      lang: z.enum(languageCodes),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("previous"),
@@ -136,6 +156,9 @@ export function applyAction(
   if (state) state = prepareState(state, today(state.config.timezone, now));
   if (op.action === "create") {
     if ((state?.id ?? null) !== op.planId) throw Error("stale");
+    // Old callers/configs remain canonical. New setup explicitly opts in.
+    if (op.config.bookOrderMode === "auto")
+      op.config.bookOrder = languageBookOrder(op.lang);
     try {
       createPlan(op.config, op.previouslyRead);
     } catch {
@@ -289,7 +312,29 @@ export function applyAction(
     if (op.action === "settings") {
       state.config.time = op.time;
       state.config.timezone = op.timezone;
+    }
+    if (
+      op.action === "language" ||
+      (op.action === "settings" && state.lang !== op.lang) ||
+      op.action === "book-order"
+    ) {
       state.lang = op.lang;
+      if (op.action === "book-order")
+        state.config.bookOrderMode = op.choice === "auto" ? "auto" : "manual";
+      // Selecting a language opts legacy plans into automatic book order.
+      if (!state.config.bookOrderMode) state.config.bookOrderMode = "auto";
+      const wanted =
+        op.action === "book-order" && op.choice !== "auto"
+          ? op.choice
+          : state.config.bookOrderMode === "auto"
+            ? languageBookOrder(op.lang)
+            : (state.pendingBookOrder ?? state.config.bookOrder ?? "western");
+      if (wanted !== (state.config.bookOrder ?? "western"))
+        state.pendingBookOrder = wanted;
+      else {
+        delete state.pendingBookOrder;
+        state.config.bookOrder = wanted;
+      }
     }
   }
   state = prepareState(state, today(state.config.timezone, now));

@@ -97,12 +97,22 @@ for (const lang of languageCodes) {
   const restored = parseBackup(makeBackup(state, lang, "dark", now + 90000));
   assert.equal(restored.state.lang, lang);
   assert.equal(restored.state.id, original.id);
-  for (const key of ["config", "done", "logs", "pace", "adaptive"])
+  for (const key of ["done", "logs", "pace", "previouslyRead"])
     assert.deepEqual(
       restored.state[key],
       original[key],
       `Changing language must preserve ${key}`,
     );
+  assert.equal(restored.state.config.start, original.config.start);
+  assert.equal(restored.state.config.amount, original.config.amount);
+  assert.equal(
+    restored.state.config.bookOrder,
+    lang === "ru" || lang === "uk" ? "eastern" : "western",
+  );
+  assert.deepEqual(
+    restored.state.adaptive.finished,
+    original.adaptive.finished,
+  );
 }
 
 const csv = csvFile(state, "uk");

@@ -14,6 +14,8 @@ import { readingPace, estimatedMinutes } from "@/lib/pace";
 import { text, bookNames, locales, type Lang } from "@/lib/i18n";
 import { planText, fill } from "@/lib/plan-i18n";
 import PreviousPicker from "./previous-picker";
+import BookOrderControl from "./book-order-control";
+import { languageBookOrder } from "@/lib/book-order";
 
 export default function PlannerForm({
   lang,
@@ -30,7 +32,7 @@ export default function PlannerForm({
   const [step, setStep] = useState(0),
     [previouslyRead, setPrevious] = useState<number[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
-  const [config, setConfig] = useState<Config>({
+  const [draftConfig, setConfig] = useState<Config>({
     amount: 12,
     unit: "months",
     start: today(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
@@ -39,7 +41,18 @@ export default function PlannerForm({
     scope: "bible",
     order: "canonical",
     keepTogether: true,
+    bookOrderMode: "auto",
   });
+  const config = useMemo(
+    () => ({
+      ...draftConfig,
+      bookOrder:
+        draftConfig.bookOrderMode === "auto"
+          ? languageBookOrder(lang)
+          : draftConfig.bookOrder,
+    }),
+    [draftConfig, lang],
+  );
   const items = scopeChapters(config);
   const computed = useMemo(() => {
     try {
@@ -132,6 +145,19 @@ export default function PlannerForm({
                     </label>
                   ))}
                 </fieldset>
+                <BookOrderControl
+                  config={config}
+                  lang={lang}
+                  disabled={busy}
+                  onChange={(choice) =>
+                    setConfig({
+                      ...config,
+                      bookOrderMode: choice === "auto" ? "auto" : "manual",
+                      bookOrder:
+                        choice === "auto" ? languageBookOrder(lang) : choice,
+                    })
+                  }
+                />
                 <fieldset className="choice-field">
                   <legend>{p.order}</legend>
                   {(["canonical", "chronological", "mixed"] as const).map(

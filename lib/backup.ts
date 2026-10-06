@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { languageCodes } from "./languages";
+import { bookOrders } from "./book-order";
 import { configSchema, previousSchema } from "./actions";
 import {
   duration,
@@ -26,6 +27,7 @@ const stateSchema = z
     id: z.string().uuid(),
     config: configSchema,
     lang: z.enum(languageCodes),
+    pendingBookOrder: z.enum(bookOrders).optional(),
     previouslyRead: previousSchema.optional(),
     completionDays: z
       .record(
@@ -108,7 +110,13 @@ const stateSchema = z
 const schema = z
   .object({
     app: z.literal("leseweg"),
-    version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    version: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+    ]),
     exportedAt: timestamp,
     theme: z.enum(["light", "dark"]),
     state: stateSchema,
@@ -164,7 +172,7 @@ export function parseBackup(raw: string): Backup {
       throw Error("backup");
     // Version 4 records overdue chapters explicitly. Legacy files can lack that
     // list; their remaining chapters are recovered by redistribution as before.
-    if (backup.version === 4) {
+    if (backup.version >= 4) {
       const accounted = new Set([
         ...previous,
         ...Object.keys(backup.state.done).map(Number),
@@ -235,7 +243,7 @@ export function makeBackup(
   return JSON.stringify(
     {
       app: "leseweg",
-      version: 4,
+      version: 5,
       exportedAt: new Date(now).toISOString(),
       theme: theme === "dark" ? "dark" : "light",
       state: snapshot,

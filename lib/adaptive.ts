@@ -78,10 +78,14 @@ export function prepareState(
   state: ReadingState,
   date = today(state.config.timezone),
 ): ReadingState {
-  if (state.adaptive?.date === date) return state;
+  if (state.adaptive?.date === date && !state.pendingBookOrder) return state;
   // A session spanning midnight keeps its recommendation until it is finished.
   if (state.adaptive && state.timer) return state;
   const copy = structuredClone(state);
+  if (copy.pendingBookOrder) {
+    copy.config.bookOrder = copy.pendingBookOrder;
+    delete copy.pendingBookOrder;
+  }
   const current = dayIndex(copy.config, date);
   if (!copy.adaptive) {
     // Preserve completed-unit counts when upgrading a fixed-plan installation.

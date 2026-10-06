@@ -9,9 +9,9 @@ const rows = {
     "YOUR TIME IN THE WORD",
   ],
   edition: [
-    "Papierbibel · Schlachter 2000",
-    "Печатная Библия · Schlachter 2000",
-    "Paper Bible · Schlachter 2000",
+    "Deine Papierbibel · 66 Bücher",
+    "Твоя печатная Библия · 66 книг",
+    "Your paper Bible · 66 books",
   ],
   eyebrow: [
     "EIN KAPITEL NACH DEM ANDEREN",
@@ -441,9 +441,9 @@ const rows = {
   ],
   language: ["Sprache", "Язык", "Language"],
   languageNote: [
-    "Die Sprache ändert die Oberfläche und Buchnamen, nicht die Kapitelzählung deiner Schlachter-2000-Papierbibel.",
-    "Язык меняет интерфейс и названия книг, но не нумерацию глав печатной Библии Schlachter 2000.",
-    "Language changes the interface and book names, not the chapter numbering of your Schlachter 2000 paper Bible.",
+    "Die Sprache passt Oberfläche, Buchnamen und die automatische Buchreihenfolge an. Eine manuell gewählte Reihenfolge bleibt bei Sprachwechseln bestehen. Dein Fortschritt und deine Lesezeiten bleiben erhalten.",
+    "Язык меняет интерфейс, названия книг и автоматический порядок книг. Порядок, выбранный вручную, сохраняется при смене языка. Прогресс и время чтения остаются на месте.",
+    "Language changes the interface, book names and automatic book order. A manually chosen order stays fixed when you switch languages. Your progress and reading times are preserved.",
   ],
   installTitle: [
     "Installieren & offline nutzen",

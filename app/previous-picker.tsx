@@ -31,7 +31,7 @@ export default function PreviousPicker({
     for (const c of scopeChapters(config))
       groups.set(c.bookIndex, [...(groups.get(c.bookIndex) ?? []), c]);
     return [...groups.entries()];
-  }, [config.scope]);
+  }, [config.scope, config.bookOrder]);
   const change = (ids: number[], checked: boolean) => {
     const next = new Set(value);
     for (const chapter of ids)

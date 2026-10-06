@@ -1,5 +1,6 @@
 import books from "./bible-lengths.json";
 import { chronologicalBlocks, cohesiveReferences } from "./reading-order";
+import { sortByBookOrder, type BookOrder } from "./book-order";
 export type Unit = "days" | "weeks" | "months";
 export type Config = {
   amount: number;
@@ -10,6 +11,8 @@ export type Config = {
   scope?: "bible" | "ot" | "nt";
   order?: "canonical" | "chronological" | "mixed";
   keepTogether?: boolean;
+  bookOrder?: BookOrder;
+  bookOrderMode?: "auto" | "manual";
 };
 export type Chapter = {
   id: number;
@@ -86,13 +89,16 @@ export type Day = {
   chapters: Chapter[];
   words: number;
 };
-export function scopeChapters(config: Pick<Config, "scope">) {
-  return chapters.filter((c) =>
-    config.scope === "ot"
-      ? c.bookIndex < 39
-      : config.scope === "nt"
-        ? c.bookIndex >= 39
-        : true,
+export function scopeChapters(config: Pick<Config, "scope" | "bookOrder">) {
+  return sortByBookOrder(
+    chapters.filter((c) =>
+      config.scope === "ot"
+        ? c.bookIndex < 39
+        : config.scope === "nt"
+          ? c.bookIndex >= 39
+          : true,
+    ),
+    config.bookOrder,
   );
 }
 export function referenceChapters(refs: string): Chapter[] {
@@ -161,7 +167,7 @@ function mixedChapters(items: Chapter[]) {
 }
 const orderCache = new Map<string, Chapter[]>();
 export function orderedChapters(config: Config) {
-  const key = `${config.scope ?? "bible"}:${config.order ?? "canonical"}`;
+  const key = `${config.scope ?? "bible"}:${config.order ?? "canonical"}:${config.bookOrder ?? "western"}`;
   const cached = orderCache.get(key);
   if (cached) return cached;
   const ordered = buildOrder(config);

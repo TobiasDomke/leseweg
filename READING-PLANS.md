@@ -3,8 +3,50 @@
 Ab Version 1.7 wählt die Einrichtung unabhängig voneinander den Umfang
 (gesamte Bibel, AT, NT), die Reihenfolge und den Zeitraum. Sie verwendet
 weiterhin die 66 Bücher und die Kapitelzählung der Schlachter-2000-Bibel:
-1.189 Kapitel insgesamt, davon 929 im AT und 260 im NT. Die Oberfläche kann
-übersetzt werden, ohne zur abweichenden Psalmzählung anderer Ausgaben zu wechseln.
+1.189 Kapitel insgesamt, davon 929 im AT und 260 im NT.
+
+## Sprache und gedruckte Buchreihenfolge (ab 1.8)
+
+Neue Pläne passen die Buchreihenfolge automatisch an die Sprache an:
+Deutsch/Englisch führen nach Apostelgeschichte die Paulusbriefe beginnend mit
+Römer; Russisch/Ukrainisch zuerst die allgemeinen Briefe Jakobus, 1./2. Petrus,
+1./2./3. Johannes und Judas, dann Römer bis Hebräer. Offenbarung bleibt zuletzt.
+Das AT bleibt in beiden angebotenen Reihenfolgen gleich.
+
+Diese Auswahl ist **keine automatische Bestimmung der Bibelübersetzung**.
+Druckausgaben derselben Sprache können verschieden sortiert sein. In Einrichtung
+und Einstellungen kann deshalb jede der beiden Reihenfolgen ausdrücklich gewählt
+werden; eine manuelle Wahl übersteht weitere Sprachwechsel. Die vollständige Liste
+der Bücher ist dort aufklappbar. Die App beschränkt sich weiterhin auf die 66 Bücher
+der bisherigen Grundlage. Apokryphen/deuterokanonische Bücher werden nicht ergänzt.
+Kapitel-, Psalm- und Verszählung bleiben auf der bisherigen Grundlage; insbesondere
+wird die Synodal-Psalmzählung **noch nicht** umgerechnet. Dieser Hinweis steht auch
+direkt bei der Auswahl. Eine Reihenfolge darf nicht als vollständiges Editionsprofil
+ausgegeben werden.
+
+Verglichene Inhaltsverzeichnisse (abgerufen 6. Oktober 2026):
+
+- [Synodal, 66 Bücher, Bible.by](https://bible.by/syn/): allgemeine Briefe vor Paulus.
+- [Ohijenko, Only.Bible](https://only.bible/bible/ubio/): allgemeine Briefe vor Paulus.
+- [Synodal, Wordproject](https://www.wordproject.org/bibles/ru/index_en.htm) und
+  [Ohijenko, Wordproject](https://www.wordproject.org/bibles/uk/index_en.htm):
+  alternative Präsentation mit Paulus zuerst; bestätigt die Notwendigkeit einer
+  ausdrücklichen Auswahl statt einer unveränderbaren Zuordnung zur Sprache.
+
+Die Sprache/Reihenfolge wird atomar mit dem Plan gespeichert. Bereits gelesene
+Kapitel verwenden weiterhin dieselben IDs; Zeitprotokolle und Trainingsdaten werden
+nicht umnummeriert. Nur offene Empfehlungen werden neu verteilt. Läuft der Timer,
+wird die gewünschte Reihenfolge als `pendingBookOrder` vorgemerkt und erst nach
+Pause/Abschluss übernommen. Ein Wechsel zurück hebt die Vormerkung auf. Die
+Vormerkung übersteht Sicherung/Wiederherstellung. Bestehende Pläne bleiben bis
+zur bewussten Sprach-/Reihenfolgewahl unverändert. Alle Sprachvarianten arbeiten
+offline; die Inhaltsverzeichnisse sind keine Laufzeit-Abhängigkeit.
+
+Die biblische Reihenfolge und die einzelnen Stränge des gemischten Plans folgen
+dieser Einstellung. Die chronologische Vorlage behält ihre zeitliche Anordnung.
+Kapitelauswahl und Exporte beachten die gespeicherte Buchreihenfolge ebenfalls.
+`tests/book-order.mjs` prüft 324 Kombinationen sowie Sprachwechsel mit bestehendem
+Fortschritt, laufendem Timer, manueller Wahl, Sicherung und Export.
 
 ## Reihenfolgen
 
@@ -92,9 +134,9 @@ Kapitel ihrer ursprünglichen gemessenen Einheit zugeordnet (`completionDays`).
 Ein laufender Timer muss zunächst pausiert werden.
 
 Bestehende Pläne ohne neue Optionen bleiben vollständige Pläne in biblischer
-Reihenfolge; ihre Lesedaten werden nicht zurückgesetzt. Sicherungsformat 4 enthält
+Reihenfolge; ihre Lesedaten werden nicht zurückgesetzt. Sicherungsformat 5 enthält
 alle neuen Angaben und prüft auch die vollständige Zuordnung offener Kapitel.
-Formate 1–3 bleiben importierbar. Neue Sicherungen sind für ältere App-Versionen
+Formate 1–4 bleiben importierbar. Neue Sicherungen sind für ältere App-Versionen
 nicht lesbar; für die Wiederherstellung zuerst die App aktualisieren.
 
 `tests/plan-options.mjs` prüft 504 Kombinationen aus Umfang, Reihenfolge,

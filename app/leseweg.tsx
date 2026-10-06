@@ -73,6 +73,8 @@ import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
 import PlannerForm from "./planner-form";
 import PlanManagement from "./plan-management";
 import ReadingContext from "./reading-context";
+import BookOrderControl from "./book-order-control";
+import { bookOrderText } from "@/lib/book-order-i18n";
 import { planText, fill } from "@/lib/plan-i18n";
 import { readState, changeState } from "@/lib/local-storage";
 import { useOffline } from "@/lib/offline";
@@ -122,11 +124,16 @@ export default function Leseweg() {
       stateRef.current = data.state;
       setState(data.state);
       setStatus("ready");
+      if (data.state?.config.bookOrderMode) setLang(data.state.lang);
       if (data.state && !silent) {
         setReminderTime(data.state.config.time);
         setZone(data.state.config.timezone);
         try {
-          if (!localStorage.getItem("leseweg-lang")) setLang(data.state.lang);
+          if (
+            !data.state.config.bookOrderMode &&
+            !localStorage.getItem("leseweg-lang")
+          )
+            setLang(data.state.lang);
         } catch {}
       }
     } catch {
@@ -243,6 +250,15 @@ export default function Leseweg() {
     [load],
   );
   const currentDate = today(state?.config.timezone || "Europe/Berlin");
+  const changeLanguage = async (value: Lang) => {
+    if (value === lang || pending.current) return;
+    if (!state) {
+      setLang(value);
+      return;
+    }
+    const updated = await mutate({ action: "language", lang: value });
+    if (updated) setLang(updated.lang);
+  };
   const planState = useMemo(
     () => (state ? prepareState(state, currentDate) : null),
     [state, currentDate],
@@ -426,7 +442,11 @@ export default function Leseweg() {
           </span>
           Leseweg<span className="brand-caption">{t.tagline}</span>
         </a>
-        <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+        <Select
+          value={lang}
+          disabled={busy || status !== "ready"}
+          onValueChange={(v) => void changeLanguage(v as Lang)}
+        >
           <SelectTrigger aria-label={t.language} className="language-select">
             <SelectValue />
           </SelectTrigger>
@@ -440,6 +460,11 @@ export default function Leseweg() {
         </Select>
       </header>
       <main className="workspace">
+        {state?.pendingBookOrder && (
+          <p className="notice" role="status">
+            {bookOrderText(lang).pending}
+          </p>
+        )}
         {offline && (
           <p className="warning" role="status">
             {t.offline}
@@ -1262,7 +1287,8 @@ export default function Leseweg() {
                     <h2>{t.language}</h2>
                     <Select
                       value={lang}
-                      onValueChange={(v) => setLang(v as Lang)}
+                      disabled={busy}
+                      onValueChange={(v) => void changeLanguage(v as Lang)}
                     >
                       <SelectTrigger
                         aria-label={t.language}
@@ -1279,6 +1305,15 @@ export default function Leseweg() {
                       </SelectContent>
                     </Select>
                     <p className="fineprint">{t.languageNote}</p>
+                    <BookOrderControl
+                      config={state.config}
+                      lang={lang}
+                      disabled={busy}
+                      pending={state.pendingBookOrder}
+                      onChange={(choice) =>
+                        void mutate({ action: "book-order", choice, lang })
+                      }
+                    />
                     <label>{t.theme}</label>
                     <Select value={theme} onValueChange={setTheme}>
                       <SelectTrigger aria-label={t.theme} className="w-full">

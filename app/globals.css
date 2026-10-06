@@ -1453,13 +1453,26 @@ fieldset {
   flex: 1;
   width: auto;
 }
-.duration-row select {
+.duration-row select,
+.book-order-control select {
   min-width: 0;
   border: 1px solid var(--border);
   padding: 12px;
   border-radius: 10px;
   color: var(--foreground);
   background: var(--card);
+}
+.book-order-control {
+  margin: 18px 0 26px;
+}
+.book-order-control select {
+  width: 100%;
+  min-height: 48px;
+  font: inherit;
+}
+.book-order-control select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 .selection-summary {
   font-weight: 600;
