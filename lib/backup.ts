@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageCodes } from "./languages";
 import { configSchema } from "./actions";
 import { duration, dateAt, isoDate } from "./planner";
 import type { ReadingState } from "./state";
@@ -18,7 +19,7 @@ const stateSchema = z
   .object({
     id: z.string().uuid(),
     config: configSchema,
-    lang: z.enum(["de", "ru", "en"]),
+    lang: z.enum(languageCodes),
     done: z.record(
       z
         .string()

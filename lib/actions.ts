@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageCodes } from "./languages";
 import { createPlan, today } from "./planner";
 import {
   prepareState,
@@ -46,7 +47,7 @@ const requestSchema = z.discriminatedUnion("action", [
     .object({
       action: z.literal("create"),
       config: configSchema,
-      lang: z.enum(["de", "ru", "en"]),
+      lang: z.enum(languageCodes),
       planId: z.string().nullable(),
       opId: z.string().uuid(),
     })
@@ -91,7 +92,7 @@ const requestSchema = z.discriminatedUnion("action", [
       action: z.literal("settings"),
       time: configSchema.shape.time,
       timezone: configSchema.shape.timezone,
-      lang: z.enum(["de", "ru", "en"]),
+      lang: z.enum(languageCodes),
       planId: z.string(),
       opId: z.string().uuid(),
     })

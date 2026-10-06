@@ -21,7 +21,7 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 - Kapitel abhaken, Leseeinheiten abschließen, Timer starten/pausieren/stoppen.
 - Zeitmessung bleibt nach dem Schließen erhalten; manuelle Zeitkorrektur.
 - Persönliche Zeitschätzungen aus abgeschlossenen Messungen, gewichtet nach Textlänge.
-- Statistik, CSV-Export, Deutsch/Russisch/Englisch, heller und dunkler Modus.
+- Statistik, CSV-Export, Deutsch/Russisch/Englisch/Ukrainisch, heller und dunkler Modus.
 - Kalenderexport mit Kapiteln, gewählter Uhrzeit und Zeitzone einschließlich Sommerzeit.
 - JSON-Sicherung und Wiederherstellung, auch auf einem anderen Gerät.
 - Offlinebetrieb, Startbildschirmsymbol und Updates mit Nutzerbestätigung.
@@ -31,8 +31,14 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 Die Wortzahlen stammen aus der gemeinfreien Lutherbibel 1912
 ([Datenquelle](https://github.com/midvash/bible-data)). Sie dienen als Näherung
 für die Textlängen in Schlachter 2000. Die Anwendung enthält keine Bibeltexte.
-Russische Buchnamen ändern die Kapitelzählung nicht; sie richtet sich weiterhin
+Übersetzte Buchnamen ändern die Kapitelzählung nicht; sie richtet sich weiterhin
 nach der Schlachter-2000-Papierbibel.
+
+Die Sprache lässt sich oben in der App oder in den Einstellungen wählen.
+Ukrainisch (`uk`, „Українська“) umfasst Oberfläche, alle 66 Buchnamen,
+Datumsanzeigen, Kalender- und Statistikexport sowie Push-Nachrichten.
+Die Auswahl bleibt auf dem Gerät gespeichert und wird in Sicherungen übernommen.
+Neue Nutzer mit ukrainischer Browsersprache erhalten automatisch Ukrainisch.
 
 ## GitHub und Cloudflare Pages
 

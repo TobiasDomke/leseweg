@@ -50,6 +50,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { text, bookNames, locales, type Lang } from "@/lib/i18n";
 import {
+  languageCodes,
+  languageLabels,
+  isLanguage,
+  browserLanguage,
+} from "@/lib/languages";
+import {
   createPlan,
   chapters,
   totalWords,
@@ -126,13 +132,8 @@ export default function Leseweg() {
   useEffect(() => {
     try {
       const l = localStorage.getItem("leseweg-lang");
-      if (l === "de" || l === "ru" || l === "en") setLang(l);
-      else {
-        const browserLang = navigator.language.slice(0, 2);
-        setLang(
-          browserLang === "ru" ? "ru" : browserLang === "de" ? "de" : "en",
-        );
-      }
+      if (isLanguage(l)) setLang(l);
+      else setLang(browserLanguage(navigator.language));
       const th = localStorage.getItem("leseweg-theme");
       if (th === "light" || th === "dark") setTheme(th);
     } catch {}
@@ -411,9 +412,11 @@ export default function Leseweg() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="de">Deutsch</SelectItem>
-            <SelectItem value="ru">Русский</SelectItem>
-            <SelectItem value="en">English</SelectItem>
+            {languageCodes.map((code) => (
+              <SelectItem key={code} value={code}>
+                {languageLabels[code]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </header>
@@ -1129,7 +1132,11 @@ export default function Leseweg() {
                     </button>
                   </form>
                   <hr />
-                  <PushControls time={state.config.time} timezone={state.config.timezone} lang={lang} />
+                  <PushControls
+                    time={state.config.time}
+                    timezone={state.config.timezone}
+                    lang={lang}
+                  />
                   <hr />
                   <h3>{t.calendar}</h3>
                   <p className="muted">{t.calendarSub}</p>
@@ -1172,9 +1179,11 @@ export default function Leseweg() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="de">Deutsch</SelectItem>
-                        <SelectItem value="ru">Русский</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
+                        {languageCodes.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {languageLabels[code]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="fineprint">{t.languageNote}</p>

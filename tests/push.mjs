@@ -361,39 +361,42 @@ assert.equal(
   Buffer.from(outgoing.options.headers.topic, "base64url").toString(),
   "leseweg-test",
 );
-const encrypted = Buffer.from(outgoing.options.body);
-const salt = encrypted.subarray(0, 16),
-  keyLength = encrypted[20];
-const serverPublic = encrypted.subarray(21, 21 + keyLength);
-const shared = subscriber.computeSecret(serverPublic);
-const info = Buffer.concat([
-  Buffer.from("WebPush: info\0"),
-  subscriber.getPublicKey(),
-  serverPublic,
-]);
-const ikm = Buffer.from(hkdfSync("sha256", shared, auth, info, 32));
-const cek = Buffer.from(
-  hkdfSync(
-    "sha256",
-    ikm,
-    salt,
-    Buffer.from("Content-Encoding: aes128gcm\0"),
-    16,
-  ),
-);
-const nonce = Buffer.from(
-  hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: nonce\0"), 12),
-);
-const ciphertext = encrypted.subarray(21 + keyLength);
-const decipher = createDecipheriv("aes-128-gcm", cek, nonce);
-decipher.setAuthTag(ciphertext.subarray(-16));
-let plaintext = Buffer.concat([
-  decipher.update(ciphertext.subarray(0, -16)),
-  decipher.final(),
-]);
-while (plaintext.at(-1) === 0) plaintext = plaintext.subarray(0, -1);
-assert.equal(plaintext.at(-1), 2);
-const payload = JSON.parse(plaintext.subarray(0, -1).toString());
+function decryptPayload(body) {
+  const encrypted = Buffer.from(body);
+  const salt = encrypted.subarray(0, 16),
+    keyLength = encrypted[20];
+  const serverPublic = encrypted.subarray(21, 21 + keyLength);
+  const shared = subscriber.computeSecret(serverPublic);
+  const info = Buffer.concat([
+    Buffer.from("WebPush: info\0"),
+    subscriber.getPublicKey(),
+    serverPublic,
+  ]);
+  const ikm = Buffer.from(hkdfSync("sha256", shared, auth, info, 32));
+  const cek = Buffer.from(
+    hkdfSync(
+      "sha256",
+      ikm,
+      salt,
+      Buffer.from("Content-Encoding: aes128gcm\0"),
+      16,
+    ),
+  );
+  const nonce = Buffer.from(
+    hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: nonce\0"), 12),
+  );
+  const ciphertext = encrypted.subarray(21 + keyLength);
+  const decipher = createDecipheriv("aes-128-gcm", cek, nonce);
+  decipher.setAuthTag(ciphertext.subarray(-16));
+  let plaintext = Buffer.concat([
+    decipher.update(ciphertext.subarray(0, -16)),
+    decipher.final(),
+  ]);
+  while (plaintext.at(-1) === 0) plaintext = plaintext.subarray(0, -1);
+  assert.equal(plaintext.at(-1), 2);
+  return JSON.parse(plaintext.subarray(0, -1).toString());
+}
+const payload = decryptPayload(outgoing.options.body);
 assert.equal(payload.web_push, 8030);
 assert.equal(payload.notification.navigate, env.APP_ORIGIN + "/");
 assert.equal(payload.notification.title, "Leseweg");
@@ -414,6 +417,29 @@ try {
 } finally {
   globalThis.fetch = originalFetch;
 }
+
+// The language must survive API validation, encrypted transport and display.
+assert.equal(
+  (await request("/subscription", "PUT", { ...settings, language: "uk" }))
+    .status,
+  200,
+);
+assert.equal(row().language, "uk");
+const ukrainianPayloads = [];
+globalThis.fetch = async (_url, options) => {
+  ukrainianPayloads.push(decryptPayload(options.body));
+  return new Response(null, { status: 201 });
+};
+try {
+  assert.equal(await sendPush(row(), env, true), 201);
+  assert.equal(await sendPush(row(), env), 201);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+for (const message of ukrainianPayloads)
+  assert.equal(message.notification.lang, "uk");
+assert.match(ukrainianPayloads[0].notification.body, /Тестове сповіщення/);
+assert.match(ukrainianPayloads[1].notification.body, /Час читати Біблію/);
 
 // Runtime diagnostics must never expose push endpoints or key material.
 const savedWarn = console.warn;
@@ -510,6 +536,17 @@ handlers.push({
     assert.fail("Declarative notifications must not be duplicated"),
 });
 assert.equal(shown.length, 1);
+for (const message of ukrainianPayloads) {
+  handlers.push({
+    data: { json: () => message },
+    waitUntil: (value) => {
+      task = value;
+    },
+  });
+  await task;
+  assert.equal(shown.at(-1)[1].lang, "uk");
+  assert.equal(shown.at(-1)[1].body, message.notification.body);
+}
 handlers.notificationclick({
   notification: { data: { url: "https://evil.example/" }, close() {} },
   waitUntil: (value) => {

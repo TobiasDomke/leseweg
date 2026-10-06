@@ -1,5 +1,7 @@
-export type Lang = "de" | "ru" | "en";
-export const locales = { de: "de-DE", ru: "ru-RU", en: "en-GB" };
+import type { Lang } from "./languages";
+import { ukrainian, ukrainianBooks } from "./i18n-uk";
+export type { Lang } from "./languages";
+export { locales } from "./languages";
 const rows = {
   tagline: [
     "DEINE ZEIT IM WORT",
@@ -632,6 +634,7 @@ const rows = {
 } satisfies Record<string, [string, string, string]>;
 export type Texts = { [K in keyof typeof rows]: string };
 export function text(lang: Lang): Texts {
+  if (lang === "uk") return ukrainian;
   const i = { de: 0, ru: 1, en: 2 }[lang];
   return Object.fromEntries(
     Object.entries(rows).map(([k, v]) => [k, v[i]]),
@@ -646,5 +649,6 @@ const ru =
     "|",
   );
 export function bookNames(lang: Lang) {
+  if (lang === "uk") return ukrainianBooks;
   return lang === "en" ? en : lang === "ru" ? ru : undefined;
 }

@@ -8,6 +8,7 @@ import type {
   ExportedHandler,
 } from "@cloudflare/workers-types";
 import { localDate, nextReminder } from "./schedule";
+import { languageCodes, type Lang } from "../lib/languages";
 
 export interface Env {
   DB: D1Database;
@@ -22,7 +23,7 @@ export interface Reminder {
   subscription: string;
   time: string;
   timezone: string;
-  language: "de" | "ru" | "en";
+  language: Lang;
   next_run: number;
   last_sent_date: string | null;
   lease_until: number;
@@ -32,7 +33,7 @@ export interface Reminder {
   updated_at: number;
 }
 type Sender = (row: Reminder, env: Env, test?: boolean) => Promise<number>;
-const languages = ["de", "ru", "en"] as const;
+const languages = languageCodes;
 const MAX_BODY = 4096;
 const MAX_SUBSCRIPTIONS = 1000;
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
@@ -137,6 +138,9 @@ function notification(row: Reminder, env: Env, test: boolean) {
     en: test
       ? "Your test notification has arrived. Daily reminders are ready."
       : "Time to read your Bible. Open Leseweg for today's chapters.",
+    uk: test
+      ? "Тестове сповіщення надійшло. Щоденні нагадування готові."
+      : "Час читати Біблію. Відкрий Leseweg, щоб побачити розділи на сьогодні.",
   };
   return {
     web_push: 8030,
