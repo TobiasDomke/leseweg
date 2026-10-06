@@ -11,7 +11,7 @@ const de = {
   bounds:
     "Wähle ein Datum zwischen {min} und {max}. Bereits aufgezeichnete Leseeinheiten bleiben erhalten.",
   preview: "Neue Aufteilung",
-  remaining: "{chapters} Kapitel auf {days} verbleibende Tage",
+  remaining: "Ungelesene Kapitel: {chapters} · Verbleibende Lesetage: {days}",
   estimate: "Ungefähr {minutes} Minuten pro Tag",
   pause:
     "Pausiere zuerst den laufenden Timer. Danach kannst du den Termin ändern.",
@@ -32,7 +32,7 @@ const en: typeof de = {
   bounds:
     "Choose a date between {min} and {max}. Recorded reading sessions are preserved.",
   preview: "New schedule",
-  remaining: "{chapters} chapters over {days} remaining days",
+  remaining: "Unread chapters: {chapters} · Remaining reading days: {days}",
   estimate: "About {minutes} minutes per day",
   pause: "Pause the running timer first. Then you can change the date.",
   today:
@@ -52,7 +52,7 @@ const ru: typeof de = {
   bounds:
     "Выберите дату между {min} и {max}. Записанные сеансы чтения сохраняются.",
   preview: "Новое распределение",
-  remaining: "Осталось {chapters} глав на {days} дней",
+  remaining: "Непрочитанные главы: {chapters} · Дней для чтения: {days}",
   estimate: "Примерно {minutes} минут в день",
   pause: "Сначала приостановите работающий таймер. Затем можно изменить дату.",
   today:
@@ -72,7 +72,7 @@ const uk: typeof de = {
   bounds:
     "Виберіть дату між {min} і {max}. Записані сеанси читання зберігаються.",
   preview: "Новий розподіл",
-  remaining: "Залишилося {chapters} розділів на {days} днів",
+  remaining: "Непрочитані розділи: {chapters} · Днів для читання: {days}",
   estimate: "Приблизно {minutes} хвилин на день",
   pause: "Спочатку призупиніть таймер. Потім можна змінити дату.",
   today:
