@@ -311,6 +311,31 @@ Lesepläne und Kalendertermine bleiben davon unabhängig.
 [Cloudflare-Cron](https://developers.cloudflare.com/workers/configuration/cron-triggers/)
 und [Workers-Grenzen](https://developers.cloudflare.com/workers/platform/limits/).
 
+## Externe Erreichbarkeitsüberwachung
+
+Für eine vom Mac, Codex und Cloudflare unabhängige Prüfung wird UptimeRobot
+verwendet. Der Free-Tarif unterstützt HTTP-Monitore mit fünf Minuten Abstand
+und E-Mail-Meldungen bei Ausfall und Wiederherstellung.
+
+| Monitor | Öffentliche Prüf-Adresse |
+| --- | --- |
+| Leseweg Web-App | `https://leseweg.pages.dev/` |
+| Leseweg Erinnerungsdienst | `https://leseweg-erinnerungen.tobidom01.workers.dev/config` |
+
+Beide Adressen funktionieren ohne Anmeldung und ohne spezielle Request-Header.
+Die HTTP-Prüfung erkennt Nichterreichbarkeit und Fehlerantworten. Sie bestätigt
+weder die Ausführung des Erinnerungs-Crons noch die Zustellung einzelner
+Push-Nachrichten auf einem Handy. Persönliche Lesedaten und Push-Anmeldungen
+werden nicht an den Überwachungsdienst übergeben.
+
+Die Einrichtung erfolgt über den offiziellen
+[Quick Monitor Setup](https://uptimerobot.com/quick-monitor-setup/)-Ablauf:
+Für jede Adresse eine Aktivierung an die vom Betreiber ausgewählte E-Mail
+anfordern, dann den Link in der E-Mail öffnen und bestätigen. Die Anmeldung
+allein aktiviert noch keinen Monitor; anschließend den Status im
+UptimeRobot-Dashboard prüfen. E-Mail-Adresse, Aktivierungslinks und Zugangsdaten
+gehören nicht ins öffentliche Repository.
+
 ## Entwicklung
 
 ### Aktualisierungen für installierte Apps
