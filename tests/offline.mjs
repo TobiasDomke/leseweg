@@ -62,6 +62,27 @@ handlers.install({
   },
 });
 await task;
+assert.equal(
+  activated,
+  false,
+  "Normal updates still wait for user confirmation",
+);
+stores.set(
+  "leseweg-offline-redirected-start",
+  new Map([["/index.html", await readFile("dist/index.html")]]),
+);
+handlers.install({
+  waitUntil: (promise) => {
+    task = promise;
+  },
+});
+await task;
+assert.equal(
+  activated,
+  true,
+  "A broken redirected start page is repaired without an inaccessible update button",
+);
+activated = false;
 stores.set("leseweg-offline-old", new Map());
 stores.set("unrelated-cache", new Map());
 handlers.activate({
@@ -72,6 +93,7 @@ handlers.activate({
 await task;
 assert(claimed);
 assert(!stores.has("leseweg-offline-old"));
+assert(!stores.has("leseweg-offline-redirected-start"));
 assert(stores.has("unrelated-cache"));
 async function offline(url, mode) {
   let response;

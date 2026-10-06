@@ -2,7 +2,21 @@ const CACHE = "leseweg-offline-__VERSION__";
 const ASSETS = __ASSETS__;
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    (async () => {
+      await (await caches.open(CACHE)).addAll(ASSETS);
+      // The first Pages release cached a redirect and could not reopen to show
+      // the update button. Repair only that broken version automatically.
+      for (const name of await caches.keys()) {
+        if (!name.startsWith("leseweg-offline-") || name === CACHE) continue;
+        const previous = await caches.open(name);
+        if ((await previous.match("/index.html"))?.redirected) {
+          await self.skipWaiting();
+          break;
+        }
+      }
+    })(),
+  );
 });
 self.addEventListener("activate", (event) => {
   event.waitUntil(

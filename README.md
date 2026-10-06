@@ -224,6 +224,10 @@ Offlineversion. Updates werden erst nach Bestätigung übernommen.
 Die Startseite wird unter ihrer endgültigen Adresse `/` gespeichert, da Cloudflare
 `/index.html` dorthin weiterleitet. Auch Änderungen am Service Worker und an seiner
 Dateiliste ändern die Cache-Version.
+Nur die fehlerhafte erste Pages-Installation mit einer zwischengespeicherten
+Weiterleitung wird automatisch repariert: Sie konnte die Update-Schaltfläche
+nicht mehr öffnen. Lesedaten bleiben dabei unverändert. Reguläre spätere Updates
+warten weiterhin auf die Bestätigung in der App.
 
 ## Prüfung
 
