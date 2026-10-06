@@ -1,4 +1,4 @@
-// Original Leseweg chapter-level arrangement, version 1. References only: no
+// Original Leseweg chapter-level arrangement, version 2 (Schlachter counts). References only: no
 // Bible text or third-party daily schedule. See READING-PLANS.md for editorial
 // choices, primary-text anchors, and the limits of historical dating.
 export type ContextKind =
@@ -74,12 +74,12 @@ export const chronologicalBlocks: { refs: string; kind?: ContextKind }[] = [
   { refs: "2KI 22-23; 2CH 34-35; ZEP 1-3", kind: "overview" },
   { refs: "JER 1-36; HAB 1-3", kind: "overview" },
   { refs: "2KI 24-25; 2CH 36; JER 37-52; LAM 1-5; PSA 137", kind: "exile" },
-  { refs: "OBA 1; JOL 1-3", kind: "undated" },
+  { refs: "OBA 1; JOL 1-4", kind: "undated" },
   { refs: "EZK 1-48; DAN 1-12", kind: "exile" },
   { refs: "EZR 1-6; HAG 1-2; ZEC 1-14", kind: "return" },
   { refs: "EST 1-10" },
   { refs: "EZR 7-10; NEH 1-13; PSA 126", kind: "return" },
-  { refs: "MAL 1-4" },
+  { refs: "MAL 1-3" },
   { refs: "LUK 1; JHN 1; MAT 1-2; LUK 2", kind: "gospels" },
   { refs: "MAT 3-4; MRK 1; LUK 3-5; JHN 2-4", kind: "gospels" },
   { refs: "MAT 5-7; LUK 6", kind: "gospels" },

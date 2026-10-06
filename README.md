@@ -20,6 +20,9 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
   Lesezeit wird separat geschätzt und beeinflusst den gemessenen Durchschnitt nicht.
 - Vollständigkeitsprüfung anhand jedes einzelnen Kapitels; keine Lücken durch
   vorheriges Lesen, zusätzliche Kapitel oder einen abgelaufenen Zieltermin.
+- Unabhängig gegen alle 66 Schlachter-Inhaltsverzeichnisse geprüfte Kapitelzahlen:
+  Joel hat 4, Maleachi 3 Kapitel. Version 1.8.1 korrigiert frühere Daten anhand der
+  Buch-/Kapitelreferenzen und erhält eine lokale Wiederherstellungskopie.
 - Zieltermin in den Einstellungen verlängern, ohne Fortschritt und Zeitmessungen
   zurückzusetzen. Ohne Verlängerung bleibt der gewählte Termin bestehen.
 - Gewichtung nach Wortzahl, ohne Kapitel aufzuteilen.

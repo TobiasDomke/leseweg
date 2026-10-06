@@ -13,6 +13,7 @@ import {
   type Day,
 } from "./planner";
 import type { ReadingState } from "./state";
+import { migrateChapters } from "./chapter-migration";
 
 export function dayIndex(config: Config, date: string) {
   return Math.max(
@@ -78,9 +79,12 @@ export function prepareState(
   state: ReadingState,
   date = today(state.config.timezone),
 ): ReadingState {
-  if (state.adaptive?.date === date && !state.pendingBookOrder) return state;
+  const correcting = state.chapterSchema !== 2;
+  if (correcting) state = migrateChapters(state);
+  if (state.adaptive?.date === date && !state.pendingBookOrder && !correcting)
+    return state;
   // A session spanning midnight keeps its recommendation until it is finished.
-  if (state.adaptive && state.timer) return state;
+  if (state.adaptive && state.timer && !correcting) return state;
   const copy = structuredClone(state);
   if (copy.pendingBookOrder) {
     copy.config.bookOrder = copy.pendingBookOrder;
@@ -103,9 +107,12 @@ export function prepareState(
         .map((day) => day.index),
     };
   }
-  const from = copy.adaptive?.finished.includes(current)
-    ? current + 1
-    : current;
+  const from =
+    correcting && copy.timer
+      ? copy.timer.day
+      : copy.adaptive?.finished.includes(current)
+        ? current + 1
+        : current;
   redistribute(copy, from, date);
   return copy;
 }

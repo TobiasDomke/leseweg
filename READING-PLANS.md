@@ -2,8 +2,66 @@
 
 Ab Version 1.7 wählt die Einrichtung unabhängig voneinander den Umfang
 (gesamte Bibel, AT, NT), die Reihenfolge und den Zeitraum. Sie verwendet
-weiterhin die 66 Bücher und die Kapitelzählung der Schlachter-2000-Bibel:
+die 66 Bücher und ab der Korrektur in 1.8.1 die geprüfte Kapitelzählung der Schlachter-2000-Bibel:
 1.189 Kapitel insgesamt, davon 929 im AT und 260 im NT.
+
+## Unabhängige Vollständigkeitsprüfung und Korrektur in 1.8.1
+
+Am 6. Oktober 2026 wurden die Kapitelüberschriften **aller 66 einzelnen
+Buch-Inhaltsverzeichnisse** auf [schlachterbibel.de](https://www.schlachterbibel.de/de/bibel/)
+abgeglichen. Die unabhängige Soll-Liste mit Quellenadresse je Buch steht in
+`lib/schlachter-canon.json`. Sie wird nicht aus den Wortzahlen oder erzeugten
+Plänen hergeleitet. Die App prüft beim Laden jedes Buch und dessen Kapitelzahl
+gegen diese Liste; fehlerhafte Bestände verhindern die Planung.
+
+Die bisher importierten Wortzahlen verwendeten bei Joel/Maleachi eine andere
+Einteilung. Schlachter hat [Joel 1–4](https://www.schlachterbibel.de/de/bibel/joel/)
+und [Maleachi 1–3](https://www.schlachterbibel.de/de/bibel/maleachi/); bis 1.8.0
+standen dort Joel 1–3 und Maleachi 1–4. Die unveränderte Summe 1.189 verdeckte
+den Fehler. Beide Bücher und die chronologische Vorlage sind berichtigt.
+Das alte Gewicht von Joel 2 wird an Vers 27/28 der bisherigen Datenquelle geteilt
+(706 + 130 Wörter); deren Joel 3 entspricht Schlachter Joel 4 (545 Wörter).
+Die alten Gewichte Maleachi 3/4 werden addiert (686 Wörter). Die Gesamtwortmenge
+bleibt erhalten. Es werden weiterhin keine Bibeltexte ausgeliefert.
+
+Die Migration auf `chapterSchema: 2` ordnet sämtliche gespeicherten Kapitel-IDs
+anhand der bisherigen **Buch-/Kapitelreferenz** zu: Häkchen, Abschluss-Tage,
+Messproben und Tageszuordnungen. Joel 4 wird ausdrücklich als offen eingeplant.
+Ein alter Maleachi-4-Haken wird nicht auf Maleachi 3 übertragen; sein ursprünglicher
+Eintrag bleibt im sichtbaren Korrekturprotokoll. Auch alte 100%-Pläne erhalten Joel 4
+als offen; nach abgelaufener Frist bleibt es in `adaptive.unplanned` verfügbar.
+
+Zeitprotokolle und laufende Timer bleiben erhalten. Messproben mit betroffenen
+Kapiteln werden mit alten Referenzen archiviert und nicht mehr zum Tempo-Training
+verwendet. Dasselbe gilt für unsichere offene Messpaare. Bei sehr alten Sicherungen
+ohne ausdrückliche Messpaare wird bei betroffenen Häkchen kein alter Durchschnitt
+rekonstruiert. Unbetroffene ausdrückliche Messproben werden nach Referenz migriert.
+Betroffene Nutzer sehen einen Hinweis und ein Protokoll ihrer früheren Einträge.
+
+IndexedDB wird auf Version 2 angehoben. Im selben Schreibvorgang bleibt eine
+unveränderte Wiederherstellungskopie unter `before-chapter-schema-2` lokal erhalten.
+Alte geöffnete App-Versionen können danach nicht mehr mit ihrer falschen
+ID-Zuordnung zurückschreiben; sie müssen aktualisiert werden. Die Migration ist
+idempotent. Sicherungen 1–5 werden zunächst validiert, anschließend migriert;
+Format 6 verlangt die neue Kapitelkennung und erhält das Korrekturprotokoll.
+Die Reihenfolge alter Sicherungen wird neu aufgebaut; fehlende oder doppelte
+Zuordnungen werden weiterhin ab Format 4 abgelehnt.
+
+`tests/completeness.mjs` prüft zusätzlich zur bisherigen Testsuite:
+
+- **5.378 Pläne** gegen die unabhängige Soll-Liste: 1.728 Kombinationen aus Umfang,
+  Planart, Buchreihenfolge, Gruppierung, Grenzlaufzeiten und Vorfortschritt sowie
+  jede Laufzeit von 1 bis 3.650 Tagen mit wechselnden Varianten. Dies ist nicht das
+  vollständige kartesische Produkt aller möglichen Eingaben.
+- **1.944 Kontrollpunkte in 36 vollständigen Leseverläufen:** mehr/weniger/kein
+  Lesen, Sprachwechsel mit Timer, Wiederaufnahme, Fristüberschreitung,
+  Verlängerung sowie Sicherung und Wiederherstellung.
+- Ablehnung gleich großer fehlerhafter Bestände (Joel fehlt, Maleachi zu viel).
+- Migration im verschobenen ID-Bereich, ehemals vollständige Pläne, aktive Timer,
+  alte Sicherungen, Wiederherstellungskopie und Schutz vor alten Clients.
+
+Diese Prüfung gilt für die unterstützte 66-Bücher-/Schlachter-Kapitelgrundlage,
+nicht für andere Kanones oder noch nicht implementierte Kapitel-/Psalmzählungen.
 
 ## Sprache und gedruckte Buchreihenfolge (ab 1.8)
 
@@ -134,9 +192,9 @@ Kapitel ihrer ursprünglichen gemessenen Einheit zugeordnet (`completionDays`).
 Ein laufender Timer muss zunächst pausiert werden.
 
 Bestehende Pläne ohne neue Optionen bleiben vollständige Pläne in biblischer
-Reihenfolge; ihre Lesedaten werden nicht zurückgesetzt. Sicherungsformat 5 enthält
+Reihenfolge; ihre Lesedaten werden nicht zurückgesetzt. Sicherungsformat 6 enthält
 alle neuen Angaben und prüft auch die vollständige Zuordnung offener Kapitel.
-Formate 1–4 bleiben importierbar. Neue Sicherungen sind für ältere App-Versionen
+Formate 1–5 bleiben importierbar. Neue Sicherungen sind für ältere App-Versionen
 nicht lesbar; für die Wiederherstellung zuerst die App aktualisieren.
 
 `tests/plan-options.mjs` prüft 504 Kombinationen aus Umfang, Reihenfolge,

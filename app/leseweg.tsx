@@ -74,6 +74,7 @@ import PlannerForm from "./planner-form";
 import PlanManagement from "./plan-management";
 import ReadingContext from "./reading-context";
 import BookOrderControl from "./book-order-control";
+import ChapterCorrection from "./chapter-correction";
 import { bookOrderText } from "@/lib/book-order-i18n";
 import { planText, fill } from "@/lib/plan-i18n";
 import { readState, changeState } from "@/lib/local-storage";
@@ -460,6 +461,7 @@ export default function Leseweg() {
         </Select>
       </header>
       <main className="workspace">
+        {state && <ChapterCorrection state={state} lang={lang} />}
         {state?.pendingBookOrder && (
           <p className="notice" role="status">
             {bookOrderText(lang).pending}

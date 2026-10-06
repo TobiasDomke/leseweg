@@ -151,9 +151,9 @@ export function applyAction(
 ): ReadingState {
   const op = requestSchema.parse(raw);
   let state = current ? structuredClone(current) : null;
+  if (state) state = prepareState(state, today(state.config.timezone, now));
   if (state?.ops.includes(op.opId)) return state;
   if (state) state.pace = paceState(state);
-  if (state) state = prepareState(state, today(state.config.timezone, now));
   if (op.action === "create") {
     if ((state?.id ?? null) !== op.planId) throw Error("stale");
     // Old callers/configs remain canonical. New setup explicitly opts in.
@@ -166,6 +166,7 @@ export function applyAction(
     }
     state = {
       id: crypto.randomUUID(),
+      chapterSchema: 2,
       config: op.config,
       lang: op.lang,
       done: {},

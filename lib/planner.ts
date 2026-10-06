@@ -1,4 +1,5 @@
 import books from "./bible-lengths.json";
+import canon from "./schlachter-canon.json";
 import { chronologicalBlocks, cohesiveReferences } from "./reading-order";
 import { sortByBookOrder, type BookOrder } from "./book-order";
 export type Unit = "days" | "weeks" | "months";
@@ -34,6 +35,25 @@ export const chapters: Chapter[] = books
     })),
   )
   .map((c, id) => ({ ...c, id }));
+// This independent inventory was checked book by book against the publisher's
+// chapter headings. A correct grand total alone cannot detect swapped counts.
+export function assertCanonInventory(
+  inventory: { code: string; words: number[] }[],
+) {
+  if (
+    inventory.length !== canon.books.length ||
+    canon.books.some(
+      (book, index) =>
+        inventory[index].code !== book.code ||
+        inventory[index].words.length !== book.chapters ||
+        inventory[index].words.some(
+          (words) => !Number.isFinite(words) || words <= 0,
+        ),
+    )
+  )
+    throw Error("canon");
+}
+assertCanonInventory(books);
 export const totalWords = chapters.reduce((sum, c) => sum + c.words, 0);
 export const minutes = (words: number) => Math.max(1, Math.round(words / 180));
 export const dateAt = (date: string) => new Date(date + "T12:00:00Z");

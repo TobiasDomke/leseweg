@@ -1,0 +1,337 @@
+{
+  "edition": "Schlachter 2000",
+  "checkedOn": "2026-10-06",
+  "source": "https://www.schlachterbibel.de/de/bibel/",
+  "books": [
+    {
+      "code": "GEN",
+      "chapters": 50,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_mose/"
+    },
+    {
+      "code": "EXO",
+      "chapters": 40,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_mose/"
+    },
+    {
+      "code": "LEV",
+      "chapters": 27,
+      "source": "https://www.schlachterbibel.de/de/bibel/3_mose/"
+    },
+    {
+      "code": "NUM",
+      "chapters": 36,
+      "source": "https://www.schlachterbibel.de/de/bibel/4_mose/"
+    },
+    {
+      "code": "DEU",
+      "chapters": 34,
+      "source": "https://www.schlachterbibel.de/de/bibel/5_mose/"
+    },
+    {
+      "code": "JOS",
+      "chapters": 24,
+      "source": "https://www.schlachterbibel.de/de/bibel/josua/"
+    },
+    {
+      "code": "JDG",
+      "chapters": 21,
+      "source": "https://www.schlachterbibel.de/de/bibel/richter/"
+    },
+    {
+      "code": "RUT",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/ruth/"
+    },
+    {
+      "code": "1SA",
+      "chapters": 31,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_samuel/"
+    },
+    {
+      "code": "2SA",
+      "chapters": 24,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_samuel/"
+    },
+    {
+      "code": "1KI",
+      "chapters": 22,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_koenige/"
+    },
+    {
+      "code": "2KI",
+      "chapters": 25,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_koenige/"
+    },
+    {
+      "code": "1CH",
+      "chapters": 29,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_chronik/"
+    },
+    {
+      "code": "2CH",
+      "chapters": 36,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_chronik/"
+    },
+    {
+      "code": "EZR",
+      "chapters": 10,
+      "source": "https://www.schlachterbibel.de/de/bibel/esra/"
+    },
+    {
+      "code": "NEH",
+      "chapters": 13,
+      "source": "https://www.schlachterbibel.de/de/bibel/nehemia/"
+    },
+    {
+      "code": "EST",
+      "chapters": 10,
+      "source": "https://www.schlachterbibel.de/de/bibel/esther/"
+    },
+    {
+      "code": "JOB",
+      "chapters": 42,
+      "source": "https://www.schlachterbibel.de/de/bibel/hiob/"
+    },
+    {
+      "code": "PSA",
+      "chapters": 150,
+      "source": "https://www.schlachterbibel.de/de/bibel/psalm/"
+    },
+    {
+      "code": "PRO",
+      "chapters": 31,
+      "source": "https://www.schlachterbibel.de/de/bibel/sprueche/"
+    },
+    {
+      "code": "ECC",
+      "chapters": 12,
+      "source": "https://www.schlachterbibel.de/de/bibel/prediger/"
+    },
+    {
+      "code": "SNG",
+      "chapters": 8,
+      "source": "https://www.schlachterbibel.de/de/bibel/hoheslied/"
+    },
+    {
+      "code": "ISA",
+      "chapters": 66,
+      "source": "https://www.schlachterbibel.de/de/bibel/jesaja/"
+    },
+    {
+      "code": "JER",
+      "chapters": 52,
+      "source": "https://www.schlachterbibel.de/de/bibel/jeremia/"
+    },
+    {
+      "code": "LAM",
+      "chapters": 5,
+      "source": "https://www.schlachterbibel.de/de/bibel/klagelieder/"
+    },
+    {
+      "code": "EZK",
+      "chapters": 48,
+      "source": "https://www.schlachterbibel.de/de/bibel/hesekiel/"
+    },
+    {
+      "code": "DAN",
+      "chapters": 12,
+      "source": "https://www.schlachterbibel.de/de/bibel/daniel/"
+    },
+    {
+      "code": "HOS",
+      "chapters": 14,
+      "source": "https://www.schlachterbibel.de/de/bibel/hosea/"
+    },
+    {
+      "code": "JOL",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/joel/"
+    },
+    {
+      "code": "AMO",
+      "chapters": 9,
+      "source": "https://www.schlachterbibel.de/de/bibel/amos/"
+    },
+    {
+      "code": "OBA",
+      "chapters": 1,
+      "source": "https://www.schlachterbibel.de/de/bibel/obadja/"
+    },
+    {
+      "code": "JON",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/jona/"
+    },
+    {
+      "code": "MIC",
+      "chapters": 7,
+      "source": "https://www.schlachterbibel.de/de/bibel/micha/"
+    },
+    {
+      "code": "NAM",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/nahum/"
+    },
+    {
+      "code": "HAB",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/habakuk/"
+    },
+    {
+      "code": "ZEP",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/zephanja/"
+    },
+    {
+      "code": "HAG",
+      "chapters": 2,
+      "source": "https://www.schlachterbibel.de/de/bibel/haggai/"
+    },
+    {
+      "code": "ZEC",
+      "chapters": 14,
+      "source": "https://www.schlachterbibel.de/de/bibel/sacharja/"
+    },
+    {
+      "code": "MAL",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/maleachi/"
+    },
+    {
+      "code": "MAT",
+      "chapters": 28,
+      "source": "https://www.schlachterbibel.de/de/bibel/matthaeus/"
+    },
+    {
+      "code": "MRK",
+      "chapters": 16,
+      "source": "https://www.schlachterbibel.de/de/bibel/markus/"
+    },
+    {
+      "code": "LUK",
+      "chapters": 24,
+      "source": "https://www.schlachterbibel.de/de/bibel/lukas/"
+    },
+    {
+      "code": "JHN",
+      "chapters": 21,
+      "source": "https://www.schlachterbibel.de/de/bibel/johannes/"
+    },
+    {
+      "code": "ACT",
+      "chapters": 28,
+      "source": "https://www.schlachterbibel.de/de/bibel/apostelgeschichte/"
+    },
+    {
+      "code": "ROM",
+      "chapters": 16,
+      "source": "https://www.schlachterbibel.de/de/bibel/roemer/"
+    },
+    {
+      "code": "1CO",
+      "chapters": 16,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_korinther/"
+    },
+    {
+      "code": "2CO",
+      "chapters": 13,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_korinther/"
+    },
+    {
+      "code": "GAL",
+      "chapters": 6,
+      "source": "https://www.schlachterbibel.de/de/bibel/galater/"
+    },
+    {
+      "code": "EPH",
+      "chapters": 6,
+      "source": "https://www.schlachterbibel.de/de/bibel/epheser/"
+    },
+    {
+      "code": "PHP",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/philipper/"
+    },
+    {
+      "code": "COL",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/kolosser/"
+    },
+    {
+      "code": "1TH",
+      "chapters": 5,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_thessalonicher/"
+    },
+    {
+      "code": "2TH",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_thessalonicher/"
+    },
+    {
+      "code": "1TI",
+      "chapters": 6,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_timotheus/"
+    },
+    {
+      "code": "2TI",
+      "chapters": 4,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_timotheus/"
+    },
+    {
+      "code": "TIT",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/titus/"
+    },
+    {
+      "code": "PHM",
+      "chapters": 1,
+      "source": "https://www.schlachterbibel.de/de/bibel/philemon/"
+    },
+    {
+      "code": "HEB",
+      "chapters": 13,
+      "source": "https://www.schlachterbibel.de/de/bibel/hebraeer/"
+    },
+    {
+      "code": "JAS",
+      "chapters": 5,
+      "source": "https://www.schlachterbibel.de/de/bibel/jakobus/"
+    },
+    {
+      "code": "1PE",
+      "chapters": 5,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_petrus/"
+    },
+    {
+      "code": "2PE",
+      "chapters": 3,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_petrus/"
+    },
+    {
+      "code": "1JN",
+      "chapters": 5,
+      "source": "https://www.schlachterbibel.de/de/bibel/1_johannes/"
+    },
+    {
+      "code": "2JN",
+      "chapters": 1,
+      "source": "https://www.schlachterbibel.de/de/bibel/2_johannes/"
+    },
+    {
+      "code": "3JN",
+      "chapters": 1,
+      "source": "https://www.schlachterbibel.de/de/bibel/3_johannes/"
+    },
+    {
+      "code": "JUD",
+      "chapters": 1,
+      "source": "https://www.schlachterbibel.de/de/bibel/judas/"
+    },
+    {
+      "code": "REV",
+      "chapters": 22,
+      "source": "https://www.schlachterbibel.de/de/bibel/offenbarung/"
+    }
+  ]
+}

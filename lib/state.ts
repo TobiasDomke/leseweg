@@ -14,6 +14,13 @@ export type PaceState = {
 };
 export type ReadingState = {
   id: string;
+  chapterSchema?: 2;
+  chapterCorrection?: {
+    // Original references, retained for review; never counted as new progress.
+    previouslyRead: string[];
+    done: Record<string, string>;
+    samples: { day: number; references: string[]; seconds: number }[];
+  };
   config: Config;
   lang: Lang;
   // Apply a language-driven order change after the active timer pauses/ends.

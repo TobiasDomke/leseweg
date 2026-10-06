@@ -11,6 +11,7 @@ import {
 } from "./planner";
 import type { ReadingState } from "./state";
 import type { Lang } from "./i18n";
+import { prepareState } from "./adaptive";
 
 const timestamp = z
   .string()
@@ -25,6 +26,33 @@ const date = z
 const stateSchema = z
   .object({
     id: z.string().uuid(),
+    chapterSchema: z.literal(2).optional(),
+    chapterCorrection: z
+      .object({
+        previouslyRead: z
+          .array(z.string().regex(/^(JOL [1-3]|MAL [1-4])$/))
+          .max(7),
+        done: z.record(z.string().regex(/^(JOL [1-3]|MAL [1-4])$/), date),
+        samples: z
+          .array(
+            z
+              .object({
+                day: z.number().int().min(0).max(3649),
+                references: z
+                  .array(z.string().regex(/^[1-3A-Z]{3} [1-9]\d{0,2}$/))
+                  .max(1189),
+                seconds: z
+                  .number()
+                  .int()
+                  .positive()
+                  .max(Number.MAX_SAFE_INTEGER),
+              })
+              .strict(),
+          )
+          .max(1189),
+      })
+      .strict()
+      .optional(),
     config: configSchema,
     lang: z.enum(languageCodes),
     pendingBookOrder: z.enum(bookOrders).optional(),
@@ -116,6 +144,7 @@ const schema = z
       z.literal(3),
       z.literal(4),
       z.literal(5),
+      z.literal(6),
     ]),
     exportedAt: timestamp,
     theme: z.enum(["light", "dark"]),
@@ -128,6 +157,8 @@ export const maxBackupBytes = 12 * 1024 * 1024;
 export function parseBackup(raw: string): Backup {
   if (raw.length > maxBackupBytes) throw Error("backup");
   const backup = schema.parse(JSON.parse(raw));
+  if (backup.version >= 6 && backup.state.chapterSchema !== 2)
+    throw Error("backup");
   const days = duration(backup.state.config);
   const expected = new Set(scopeChapters(backup.state.config).map((c) => c.id));
   const previous = new Set(backup.state.previouslyRead ?? []);
@@ -188,7 +219,10 @@ export function parseBackup(raw: string): Backup {
         .filter((c) => scheduledIds.has(c.id) && !backup.state.done[c.id])
         .map((c) => c.id);
       const assigned = scheduled.filter((id) => !backup.state.done[id]);
-      if (unread.some((id, index) => assigned[index] !== id))
+      if (
+        backup.state.chapterSchema === 2 &&
+        unread.some((id, index) => assigned[index] !== id)
+      )
         throw Error("backup");
     }
     if (
@@ -202,6 +236,14 @@ export function parseBackup(raw: string): Backup {
     )
       throw Error("backup");
   }
+  if (backup.state.chapterSchema !== 2)
+    backup.state = {
+      ...prepareState(
+        backup.state,
+        backup.state.adaptive?.date ?? backup.state.config.start,
+      ),
+      timer: null,
+    };
   return backup;
 }
 
@@ -211,7 +253,11 @@ export function makeBackup(
   theme: string,
   now = Date.now(),
 ) {
-  const snapshot = structuredClone(state);
+  const snapshot = structuredClone(
+    state.chapterSchema === 2
+      ? state
+      : prepareState(state, state.adaptive?.date ?? state.config.start),
+  );
   // A backup records elapsed time at export, never a timer that keeps running
   // for days until the file is restored on another device.
   if (snapshot.timer) {
@@ -243,7 +289,7 @@ export function makeBackup(
   return JSON.stringify(
     {
       app: "leseweg",
-      version: 5,
+      version: 6,
       exportedAt: new Date(now).toISOString(),
       theme: theme === "dark" ? "dark" : "light",
       state: snapshot,
