@@ -540,3 +540,33 @@ von der Änderung des Zieltermins ausgenommen.
 von Ausgaben, Umfang, Reihenfolge und früheren/späteren Zielen, verpasste Tage,
 mehrfaches Mehrlesen, den Abschluss heute, pausierte Zeitmessungen, erhaltene
 Sicherungen und den Schutz der festen 52-Wochen-Vorlage.
+
+## Update 1.12: Lesezeit in Stunden und Minuten
+
+Alle sichtbaren Zeitdauern in der Statistik, im Fortschritt, in Planvorschauen,
+im Zieldatum-Dialog und in Kalenderbeschreibungen verwenden ab einer Stunde
+Stunden und Minuten (z. B. `4 Std. 41 Min.`). Der laufende Timer zeigt weiterhin
+Sekunden. Die Korrektur einer Lesezeit bietet separate Felder für Stunden,
+Minuten und Sekunden; ein erneutes Speichern verliert keine Sekunden.
+
+Die Statistik verbindet gemessene Lesezeit, geschätzte Zeit für vorher gelesene
+Kapitel, bisherige Gesamtzeit, geschätzten Restaufwand und den voraussichtlichen
+Gesamtaufwand. Ohne Timer abgeschlossene Kapitel erhalten eine eigene, eindeutig
+als Schätzung bezeichnete Zeit. Bereits gemessene Kapitel werden nicht noch
+zusätzlich geschätzt, auch wenn ihre Messung für die Tempo-Prognose ausgeschlossen
+wurde. Messwerte werden weder ersetzt noch durch die Schätzung verändert.
+
+Restaufwand und frühere Schätzungen verwenden die Textlängen der gewählten
+Bibelausgabe sowie dasselbe persönliche Lesetempo wie die Tagesempfehlungen.
+Gelesene und vorher markierte Kapitel werden aus dem Restaufwand ausgeschlossen.
+Das gilt auch für AT/NT-Pläne und die unveränderte 52-Wochen-Vorlage. Berechnung
+und Summierung erfolgen in Sekunden; erst die Anzeige rundet auf ganze Minuten.
+Die Tagesgrafik nutzt das beschriftete Format Stunden:Minuten. CSV-Zeitspalten
+bleiben für bestehende Auswertungen numerische Minutenwerte; Sicherungen enthalten
+weiter die vollständigen sekundengenauen Messwerte.
+
+`tests/reading-time.mjs` prüft Stunden- und Minutengrenzen, 281-Minuten-Beispiel,
+sekundengenaue Korrekturen, zwölf Kombinationen aus Ausgabe und Umfang,
+persönliches Tempo, vorheriges und ungemessenes Lesen, aktive/pausierte Timer,
+Summierung kurzer Messungen, Schutz vor Doppelzählung, vollständigen Abschluss,
+ältere Daten und Sicherungen. Alle vier Oberflächensprachen sind enthalten.

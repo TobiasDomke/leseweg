@@ -39,12 +39,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
@@ -76,12 +70,20 @@ import {
   type Config,
 } from "@/lib/planner";
 import { daySeconds, type ReadingState } from "@/lib/state";
-import { readingPace, estimatedMinutes, sampleNeedsReview } from "@/lib/pace";
+import { readingPace, estimatedSeconds, sampleNeedsReview } from "@/lib/pace";
+import {
+  readingTime,
+  readingTimeClock,
+  readingTimeSummary,
+} from "@/lib/reading-time";
+import { readingTimeText } from "@/lib/reading-time-i18n";
+import ReadingTimeOverview from "./reading-time-overview";
 import { applyAction } from "@/lib/actions";
 import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
 import Bible52Weeks from "./bible52-weeks";
 import { bible52Text, bible52Position } from "@/lib/bible52-i18n";
 import PlannerForm from "./planner-form";
+import TimeCorrectionDialog from "./time-correction-dialog";
 import DeadlineDialog from "./deadline-dialog";
 import { deadlineText } from "@/lib/deadline-i18n";
 import PlanManagement from "./plan-management";
@@ -126,7 +128,7 @@ export default function Leseweg({
     [changingDeadline, setChangingDeadline] = useState(false),
     [editing, setEditing] = useState(false),
     [finishing, setFinishing] = useState(false),
-    [correctMinutes, setCorrectMinutes] = useState("0"),
+    [correctSeconds, setCorrectSeconds] = useState(0),
     [reminderTime, setReminderTime] = useState("07:30"),
     [zone, setZone] = useState("Europe/Berlin");
   const offlineSupport = useOffline();
@@ -317,7 +319,10 @@ export default function Leseweg({
     [planState, currentDate],
   );
   const pace = useMemo(() => readingPace(state), [state]);
-  const estimate = (words: number) => estimatedMinutes(words, pace);
+  const timeText = readingTimeText(lang);
+  const estimate = (words: number) =>
+    readingTime(estimatedSeconds(words, pace), lang);
+  const timeSummary = state ? readingTimeSummary(state, now, pace) : null;
   const dateIndex = planState
     ? fixed
       ? bible52CurrentUnit(planState)
@@ -326,11 +331,6 @@ export default function Leseweg({
   const scoped = scopeChapters(state?.config ?? {});
   const totalWords = scoped.reduce((sum, c) => sum + c.words, 0);
   const priorIds = state?.previouslyRead ?? [];
-  const previousWords = priorIds.reduce(
-    (sum, id) => sum + chapterInventory[id].words,
-    0,
-  );
-  const previousSeconds = Math.round(previousWords * pace.secondsPerWord);
   const day =
       days[
         Math.max(
@@ -347,12 +347,7 @@ export default function Leseweg({
       .filter((c) => doneSet[c.id])
       .reduce((s, c) => s + c.words, 0),
     percent = Math.round((readWords / totalWords) * 1000) / 10,
-    totalSeconds = state
-      ? state.logs.reduce((s, l) => s + l.seconds, 0) +
-        (state.timer
-          ? Math.max(0, Math.floor((now - state.timer.startedAt) / 1000))
-          : 0)
-      : 0;
+    totalSeconds = timeSummary?.measuredSeconds ?? 0;
   const completedUnits = sessions.length;
   const timedSessions = sessions.filter((s) => s.seconds > 0);
   const timedUnits = timedSessions.length;
@@ -626,7 +621,7 @@ export default function Leseweg({
                     (remainingDays > 0 && remainingChapters > 0
                       ? " " +
                         fill(p.workload, {
-                          minutes: estimate(remainingWords / remainingDays),
+                          time: estimate(remainingWords / remainingDays),
                         })
                       : "")
                   : t.timerStopped}
@@ -840,7 +835,7 @@ export default function Leseweg({
                     {day.words > 0 && (
                       <span>
                         <Clock3 size={15} />
-                        {t.approx} {estimate(day.words)} {t.min} ·{" "}
+                        {t.approx} {estimate(day.words)} ·{" "}
                         {pace.personal
                           ? t.personalEstimate
                           : pace.learning
@@ -962,7 +957,7 @@ export default function Leseweg({
                               )}
                             </span>
                             <small>
-                              {t.approx} {estimate(c.words)} {t.min}
+                              {t.approx} {estimate(c.words)}
                             </small>
                           </label>
                         ))}
@@ -1027,9 +1022,7 @@ export default function Leseweg({
                               )))
                         }
                         onClick={() => {
-                          setCorrectMinutes(
-                            String(Math.round(seconds / 6) / 10),
-                          );
+                          setCorrectSeconds(seconds);
                           setEditing(true);
                         }}
                       >
@@ -1058,9 +1051,7 @@ export default function Leseweg({
                     <div className="compact-stat">
                       <Clock3 size={19} />
                       <span>{p.measured}</span>
-                      <strong>
-                        {Math.floor(totalSeconds / 60)} {t.min}
-                      </strong>
+                      <strong>{readingTime(totalSeconds, lang)}</strong>
                     </div>
                   </section>
                   <section className="panel next-card">
@@ -1105,7 +1096,7 @@ export default function Leseweg({
                             </strong>
                             <small>
                               {d.words
-                                ? `${t.approx} ${estimate(d.words)} ${t.min}`
+                                ? `${t.approx} ${estimate(d.words)}`
                                 : t.rest}
                             </small>
                           </span>
@@ -1201,7 +1192,7 @@ export default function Leseweg({
                             </small>
                           </span>
                           <span className="plan-duration">
-                            {d.words ? `${estimate(d.words)} ${t.min}` : "–"}
+                            {d.words ? `${estimate(d.words)}` : "–"}
                             <small>
                               {isDone
                                 ? t.finished
@@ -1261,16 +1252,11 @@ export default function Leseweg({
               )}
               <div className="stats-grid">
                 {[
-                  [
-                    p.measured,
-                    `${Math.floor(totalSeconds / 60)}`,
-                    t.min,
-                    Clock3,
-                  ],
+                  [p.measured, readingTime(totalSeconds, lang), "", Clock3],
                   [
                     t.avgTime,
-                    timedUnits ? `${Math.round(averageSession / 60)}` : "–",
-                    t.min,
+                    timedUnits ? readingTime(averageSession, lang) : "–",
+                    "",
                     BarChart3,
                   ],
                   [t.units, String(completedUnits), "", CircleCheck],
@@ -1286,7 +1272,13 @@ export default function Leseweg({
                     <section className="panel stat-card" key={String(label)}>
                       <I size={20} />
                       <p>{String(label)}</p>
-                      <strong>
+                      <strong
+                        className={
+                          label === p.measured || label === t.avgTime
+                            ? "duration-value"
+                            : undefined
+                        }
+                      >
                         {String(value)}
                         <small>{String(unit)}</small>
                       </strong>
@@ -1294,34 +1286,8 @@ export default function Leseweg({
                   );
                 })}
               </div>
-              {priorIds.length > 0 && (
-                <section className="panel pace-panel">
-                  <h2>{p.previous}</h2>
-                  <p className="muted">
-                    {fill(p.selected, { count: priorIds.length })}
-                  </p>
-                  <div className="past-time-stats">
-                    <div>
-                      <span>{p.estimatedPast}</span>
-                      <strong>
-                        {Math.round(previousSeconds / 60).toLocaleString(
-                          locales[lang],
-                        )}{" "}
-                        {t.min}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>{p.includingEstimate}</span>
-                      <strong>
-                        {Math.round(
-                          (totalSeconds + previousSeconds) / 60,
-                        ).toLocaleString(locales[lang])}{" "}
-                        {t.min}
-                      </strong>
-                    </div>
-                  </div>
-                  <p className="muted">{p.pastNote}</p>
-                </section>
+              {timeSummary && (
+                <ReadingTimeOverview summary={timeSummary} lang={lang} />
               )}
               <section className="panel pace-panel">
                 <div className="pace-heading">
@@ -1339,7 +1305,7 @@ export default function Leseweg({
                   {pace.personal || pace.learning
                     ? t.paceBased
                         .replace("{chapters}", String(pace.chapters))
-                        .replace("{time}", clockText(pace.seconds))
+                        .replace("{time}", readingTime(pace.seconds, lang))
                     : t.paceFallback}
                 </p>
                 <p className="muted">{e.paceHelp}</p>
@@ -1357,7 +1323,7 @@ export default function Leseweg({
                           ? bible52Position(sample.day, lang)
                           : fmt(addDays(state.config.start, sample.day))}{" "}
                         · {sample.chapters.length} {t.chapters} ·{" "}
-                        {clockText(sample.seconds)}
+                        {readingTime(sample.seconds, lang)}
                       </p>
                       <label>
                         {e.paceUse}
@@ -1385,7 +1351,7 @@ export default function Leseweg({
               <section className="panel chart-panel">
                 <h2>{t.chartTitle}</h2>
                 <p className="muted">
-                  {t.measured} · {t.min}
+                  {t.measured} · {timeText.chart}
                 </p>
                 <div className="time-chart">
                   {Array.from({ length: 7 }, (_, i) => {
@@ -1400,8 +1366,13 @@ export default function Leseweg({
                         ),
                       );
                     return (
-                      <div className="chart-column" key={date}>
-                        <span>{Math.round(sum / 60)}</span>
+                      <div
+                        className="chart-column"
+                        key={date}
+                        title={`${fmt(date)} · ${readingTime(sum, lang)}`}
+                        aria-label={`${fmt(date)} · ${readingTime(sum, lang)}`}
+                      >
+                        <span>{readingTimeClock(sum)}</span>
                         <div className="bar-track">
                           <div
                             className="bar"
@@ -1451,7 +1422,7 @@ export default function Leseweg({
                             · {fmt(d.date)}
                           </small>
                         </span>
-                        <strong>{clockText(d.seconds)}</strong>
+                        <strong>{readingTime(d.seconds, lang)}</strong>
                       </button>
                     ))
                 )}
@@ -1752,7 +1723,7 @@ export default function Leseweg({
             disabled={busy}
             onClick={() => {
               setFinishing(false);
-              setCorrectMinutes(String(Math.round(seconds / 6) / 10));
+              setCorrectSeconds(seconds);
               setEditing(true);
             }}
           >
@@ -1774,11 +1745,14 @@ export default function Leseweg({
             ) : remainingDays > 0 ? (
               <p>
                 {remainingDays} {t.daysRemaining} · {t.approx}{" "}
-                {estimatedMinutes(
-                  remainingWords / remainingDays,
-                  finishingPace,
+                {readingTime(
+                  estimatedSeconds(
+                    remainingWords / remainingDays,
+                    finishingPace,
+                  ),
+                  lang,
                 )}{" "}
-                {t.minsDaily}
+                {timeText.daily}
               </p>
             ) : (
               <p className="warning">{t.noDaysRemaining}</p>
@@ -1803,46 +1777,18 @@ export default function Leseweg({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent>
-          <DialogTitle>{t.editTime}</DialogTitle>
-          <DialogDescription>
-            {fixed ? f.minutes : t.minutesLabel}
-          </DialogDescription>
-          <form
-            className="mt-0"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (
-                day &&
-                (await mutate({
-                  action: "correct",
-                  day: day.index,
-                  minutes: Number(correctMinutes),
-                }))
-              )
-                setEditing(false);
-            }}
-          >
-            <label htmlFor="correct-time">
-              {fixed ? f.minutes : t.minutesLabel}
-            </label>
-            <input
-              id="correct-time"
-              type="number"
-              min="0"
-              max="1440"
-              step="0.1"
-              required
-              value={correctMinutes}
-              onChange={(e) => setCorrectMinutes(e.target.value)}
-            />
-            <button className="primary mt-5" disabled={busy}>
-              {t.save}
-            </button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {editing && (
+        <TimeCorrectionDialog
+          seconds={correctSeconds}
+          lang={lang}
+          busy={busy}
+          onClose={() => setEditing(false)}
+          onSave={async (value) =>
+            day &&
+            mutate({ action: "correct", day: day.index, minutes: value / 60 })
+          }
+        />
+      )}
     </div>
   );
 }

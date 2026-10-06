@@ -3,12 +3,15 @@ import { createRoot } from "react-dom/client";
 import { useState, useEffect, useRef } from "react";
 import Leseweg from "../app/leseweg";
 import DeadlineDialog from "../app/deadline-dialog";
+import TimeCorrectionDialog from "../app/time-correction-dialog";
 import { applyAction } from "../lib/actions";
 import { today } from "../lib/planner";
 import { rescheduleDeadline } from "../lib/deadline";
 import PlannerForm from "../app/planner-form";
 import type { Lang } from "../lib/i18n";
 import { isLanguage, languageCodes, languageLabels } from "../lib/languages";
+import { readState, changeState } from "../lib/local-storage";
+import { languageEdition } from "../lib/editions";
 import "../app/globals.css";
 function Preview() {
   const [width, setWidth] = useState("393"),
@@ -69,11 +72,17 @@ function Preview() {
       <label>
         Test screen{" "}
         <select value={screen} onChange={(e) => setScreen(e.target.value)}>
-          {["today", "plan", "stats", "settings", "setup", "deadline"].map(
-            (n) => (
-              <option key={n}>{n}</option>
-            ),
-          )}
+          {[
+            "today",
+            "plan",
+            "stats",
+            "settings",
+            "setup",
+            "deadline",
+            "correction",
+          ].map((n) => (
+            <option key={n}>{n}</option>
+          ))}
         </select>
       </label>
       <label>
@@ -172,13 +181,96 @@ function DeadlinePreview() {
     </main>
   );
 }
+function CorrectionPreview() {
+  const requested = new URLSearchParams(location.search).get("lang"),
+    lang = isLanguage(requested) ? requested : "de";
+  const [seconds, setSeconds] = useState(16877),
+    [open, setOpen] = useState(true);
+  return (
+    <main className="workspace">
+      <button onClick={() => setOpen(true)}>Open correction preview</button>
+      <p aria-label="Saved seconds">{seconds}</p>
+      {open && (
+        <TimeCorrectionDialog
+          seconds={seconds}
+          lang={lang}
+          busy={false}
+          onClose={() => setOpen(false)}
+          onSave={async (value) => {
+            setSeconds(value);
+            return true;
+          }}
+        />
+      )}
+    </main>
+  );
+}
+// Explicit opt-in on a fresh test origin only. Never replace an existing plan.
+function TimePreview() {
+  const [ready, setReady] = useState(false),
+    [message, setMessage] = useState("");
+  const requested = new URLSearchParams(location.search).get("lang");
+  const lang = isLanguage(requested) ? requested : "de";
+  if (ready) return <Leseweg previewInstalled previewTab="stats" />;
+  return (
+    <main className="workspace">
+      <button
+        className="primary"
+        onClick={async () => {
+          if (await readState()) {
+            setMessage(
+              "Existing plan preserved. Use another empty test origin.",
+            );
+            return;
+          }
+          let state = await changeState({
+            action: "create",
+            planId: null,
+            opId: crypto.randomUUID(),
+            lang,
+            config: {
+              start: today(),
+              amount: 365,
+              unit: "days",
+              time: "07:30",
+              timezone: "Europe/Berlin",
+              edition: languageEdition(lang),
+            },
+            previouslyRead: [0, 1, 2],
+          });
+          const act = async (op: Record<string, unknown>) => {
+            state = await changeState({
+              ...op,
+              planId: state!.id,
+              opId: crypto.randomUUID(),
+            });
+          };
+          await act({ action: "chapter", chapter: 3, done: true });
+          await act({ action: "correct", day: 0, minutes: 16877 / 60 });
+          await act({ action: "complete", day: 0 });
+          await act({ action: "reopen", day: 0 });
+          await act({ action: "chapter", chapter: 4, done: true });
+          await act({ action: "complete", day: 0 });
+          setReady(true);
+        }}
+      >
+        Create time QA plan (empty test origin only)
+      </button>
+      <p role="status">{message}</p>
+    </main>
+  );
+}
 if (import.meta.env.DEV)
   createRoot(document.getElementById("root")!).render(
-    new URLSearchParams(location.search).get("frame") === "1" ? (
+    new URLSearchParams(location.search).get("sample") === "time" ? (
+      <TimePreview />
+    ) : new URLSearchParams(location.search).get("frame") === "1" ? (
       new URLSearchParams(location.search).get("tab") === "setup" ? (
         <SetupPreview />
       ) : new URLSearchParams(location.search).get("tab") === "deadline" ? (
         <DeadlinePreview />
+      ) : new URLSearchParams(location.search).get("tab") === "correction" ? (
+        <CorrectionPreview />
       ) : (
         <Leseweg
           previewInstalled

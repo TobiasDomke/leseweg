@@ -1036,6 +1036,18 @@ small {
   font-weight: 500;
   white-space: nowrap;
 }
+.duration-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.duration-fields label {
+  min-width: 0;
+  font-size: 0.8rem;
+}
+.duration-fields input {
+  margin-top: 8px;
+}
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1985,4 +1997,89 @@ a:focus-visible {
 }
 .deadline-preview p {
   margin: 6px 0 0;
+}
+
+.stat-card > strong.duration-value {
+  display: block;
+  font-size: clamp(1.25rem, 2.7vw, 1.9rem);
+  line-height: 1.45;
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.stat-card > strong {
+  margin-top: auto;
+}
+.time-estimate.duration-estimate {
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+.duration-estimate > strong {
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.reading-time-overview {
+  padding: 30px;
+  margin-bottom: 24px;
+}
+.reading-time-overview h2 {
+  font-size: 1.5rem;
+}
+.reading-time-overview dl {
+  margin: 20px 0;
+}
+.reading-time-overview dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 14px 0;
+}
+.reading-time-overview dt {
+  flex: 1 1 220px;
+  color: var(--muted-foreground);
+}
+.reading-time-overview dt small {
+  display: block;
+  margin-top: 5px;
+}
+.reading-time-overview dd {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.reading-time-overview .time-subtotal {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.reading-time-overview .time-total {
+  margin-top: 8px;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--secondary);
+}
+.time-total dt {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.chart-column > span {
+  font-size: clamp(0.6rem, 2.2vw, 0.8rem);
+  white-space: nowrap;
+}
+.history-row > strong {
+  text-align: right;
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .reading-time-overview {
+    padding: 24px;
+  }
+  .compact-stat {
+    flex-wrap: wrap;
+  }
 }

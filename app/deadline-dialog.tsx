@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { chaptersFor, addDays, duration, dateAt, today } from "@/lib/planner";
 import { dayIndex } from "@/lib/adaptive";
+import { readingTime } from "@/lib/reading-time";
 import { deadlineBounds, rescheduleDeadline } from "@/lib/deadline";
 import { deadlineText } from "@/lib/deadline-i18n";
-import { readingPace, estimatedMinutes } from "@/lib/pace";
+import { readingPace, estimatedSeconds } from "@/lib/pace";
 import { text, locales, type Lang } from "@/lib/i18n";
 import { fill } from "@/lib/plan-i18n";
 import type { ReadingState } from "@/lib/state";
@@ -63,7 +64,7 @@ export default function DeadlineDialog({
   const words = remaining
     .flat()
     .reduce((sum, id) => sum + (inventory[id]?.words ?? 0), 0);
-  const estimate = estimatedMinutes(
+  const estimate = estimatedSeconds(
     words / Math.max(1, remaining.length),
     readingPace(state),
   );
@@ -115,8 +116,10 @@ export default function DeadlineDialog({
             <div className="deadline-preview" aria-live="polite">
               <strong>{d.preview}</strong>
               <p>{fill(d.remaining, { chapters: count, days })}</p>
-              {!!count && <p>{fill(d.estimate, { minutes: estimate })}</p>}
-              {count > 0 && estimate > 90 && (
+              {!!count && (
+                <p>{fill(d.estimate, { time: readingTime(estimate, lang) })}</p>
+              )}
+              {count > 0 && estimate > 5400 && (
                 <p className="warning">{t.longDay}</p>
               )}
               {end === date && count > 0 && <p>{d.today}</p>}

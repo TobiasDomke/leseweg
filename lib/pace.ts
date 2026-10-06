@@ -204,11 +204,18 @@ export function readingPace(state: ReadingState | null) {
   };
 }
 
+export function estimatedSeconds(
+  words: number,
+  pace: ReturnType<typeof readingPace>,
+) {
+  return Math.max(0, words) * pace.secondsPerWord;
+}
+
 export function estimatedMinutes(
   words: number,
   pace: ReturnType<typeof readingPace>,
 ) {
   return words > 0
-    ? Math.max(1, Math.round((words * pace.secondsPerWord) / 60))
+    ? Math.max(1, Math.round(estimatedSeconds(words, pace) / 60))
     : 0;
 }

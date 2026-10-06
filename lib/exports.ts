@@ -1,6 +1,7 @@
 import { isBible52, passage, scopeChapters } from "./planner";
+import { readingTime } from "./reading-time";
 import { planText } from "./plan-i18n";
-import { readingPace, estimatedMinutes } from "./pace";
+import { readingPace, estimatedMinutes, estimatedSeconds } from "./pace";
 import { bookNames, text, type Lang } from "./i18n";
 import { daySeconds, type ReadingState } from "./state";
 import { readingPlan, readChaptersOnDay } from "./adaptive";
@@ -85,7 +86,7 @@ export function calendarFile(state: ReadingState, lang: Lang, origin: string) {
       `DTSTART:${stamp(start)}`,
       `DTEND:${stamp(new Date(start.getTime() + estimate(day.words) * 60000))}`,
       `SUMMARY:${escapeICS(title)}`,
-      `DESCRIPTION:${escapeICS(`${t.day} ${day.index + 1}\n${passage(day.chapters, names)}\n${t.approx} ${estimate(day.words)} ${t.min}\n${origin}/?day=${day.index}`)}`,
+      `DESCRIPTION:${escapeICS(`${t.day} ${day.index + 1}\n${passage(day.chapters, names)}\n${t.approx} ${readingTime(estimatedSeconds(day.words, pace), lang)}\n${origin}/?day=${day.index}`)}`,
       `URL:${origin}/?day=${day.index}`,
       "BEGIN:VALARM",
       "TRIGGER:PT0S",

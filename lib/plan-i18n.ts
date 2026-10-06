@@ -1,7 +1,7 @@
 import type { Lang } from "./languages";
 const de = {
   workload:
-    "Für die verbleibenden Tage sind jetzt ungefähr {minutes} Minuten pro Tag eingeplant.",
+    "Für die verbleibenden Tage sind jetzt ungefähr {time} pro Tag eingeplant.",
   setup: "Dein Plan, dein Einstieg",
   setupHelp: "Wähle, was du lesen möchtest und wo du bereits stehst.",
   stepPlan: "Dein Plan",
@@ -89,8 +89,7 @@ const de = {
 };
 type PlanTexts = { [K in keyof typeof de]: string };
 const en: PlanTexts = {
-  workload:
-    "The remaining days now have about {minutes} minutes of reading per day.",
+  workload: "The remaining days now have about {time} of reading per day.",
   setup: "Your plan, your starting point",
   setupHelp: "Choose what to read and tell us how far you have already come.",
   stepPlan: "Your plan",
@@ -177,8 +176,7 @@ const en: PlanTexts = {
     "Letters accompany approximate phases of the early churches and Paul's journeys. Dates, particularly of individual letters, are disputed.",
 };
 const ru: PlanTexts = {
-  workload:
-    "На оставшиеся дни запланировано примерно {minutes} минут чтения в день.",
+  workload: "На оставшиеся дни запланировано примерно {time} чтения в день.",
   setup: "Твой план и отправная точка",
   setupHelp: "Выбери, что хочешь читать, и отметь уже прочитанное.",
   stepPlan: "Твой план",
@@ -265,8 +263,7 @@ const ru: PlanTexts = {
     "Послания размещены около соответствующих этапов ранних церквей и путешествий Павла. Датировки отдельных посланий спорны.",
 };
 const uk: PlanTexts = {
-  workload:
-    "На решту днів заплановано приблизно {minutes} хвилин читання на день.",
+  workload: "На решту днів заплановано приблизно {time} читання на день.",
   setup: "Твій план і початкова точка",
   setupHelp: "Обери, що хочеш читати, і познач уже прочитане.",
   stepPlan: "Твій план",

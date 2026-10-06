@@ -1,4 +1,6 @@
 "use client";
+import { readingTime } from "@/lib/reading-time";
+import { readingTimeText } from "@/lib/reading-time-i18n";
 import { planEndingOn } from "@/lib/deadline";
 import { deadlineText } from "@/lib/deadline-i18n";
 import { languageEdition, editionName } from "@/lib/editions";
@@ -17,7 +19,7 @@ import {
   type Config,
   type Unit,
 } from "@/lib/planner";
-import { readingPace, estimatedMinutes } from "@/lib/pace";
+import { readingPace, estimatedMinutes, estimatedSeconds } from "@/lib/pace";
 import { text, bookNames, locales, type Lang } from "@/lib/i18n";
 import { planText, fill } from "@/lib/plan-i18n";
 import Bible52Weeks from "./bible52-weeks";
@@ -88,6 +90,8 @@ export default function PlannerForm({
   const remainingWords = computed.days.reduce((sum, day) => sum + day.words, 0);
   const estimate = (words: number) =>
     estimatedMinutes(words, readingPace(null));
+  const estimateText = (words: number) =>
+    readingTime(estimatedSeconds(words, readingPace(null)), lang);
   const fmt = (s: string, long = false) =>
     dateAt(s).toLocaleDateString(locales[lang], {
       timeZone: "UTC",
@@ -472,10 +476,10 @@ export default function PlannerForm({
       </section>
       <aside className="preview-panel">
         <span className="eyebrow">{t.overview}</span>
-        <div className="time-estimate">
+        <div className="time-estimate duration-estimate">
           <strong>
             {computed.days.length
-              ? estimate(
+              ? estimateText(
                   remainingWords /
                     (fixed
                       ? computed.days.filter((d) => d.chapters.length).length ||
@@ -485,7 +489,7 @@ export default function PlannerForm({
               : "–"}
           </strong>
           <span>
-            {t.minsDaily}
+            {readingTimeText(lang).daily}
             <br />
             <small>{t.estimate}</small>
           </span>
@@ -536,9 +540,7 @@ export default function PlannerForm({
                   <strong>{passage(d.chapters, names) || t.rest}</strong>
                   <small>
                     {fixed ? bible52Position(d.index, lang) : fmt(d.date)} ·{" "}
-                    {d.words
-                      ? `${t.approx} ${estimate(d.words)} ${t.min}`
-                      : t.rest}
+                    {d.words ? `${t.approx} ${estimateText(d.words)}` : t.rest}
                   </small>
                 </div>
               </div>
