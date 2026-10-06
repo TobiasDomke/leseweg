@@ -221,6 +221,8 @@ fehlgeschlagener Versand; Anmeldedaten werden nicht an andere Adressen
 weitergeleitet. Bei Versandfehlern stehen in einer vorübergehend geöffneten
 Live-Diagnose Status und bereinigte Fehlermeldungen zur Verfügung. Push-Adressen
 und Schlüssel werden entfernt; dauerhafte Worker-Anwendungslogs bleiben aus.
+Die Zusammenfassungskennung (`Topic`) wird Base64url-codiert, damit Apple sie
+auch für tägliche Erinnerungen akzeptiert.
 
 Die Nachricht erinnert allgemein an das Bibellesen. Erst beim Öffnen zeigt die
 App die lokal berechneten Kapitel. Der Dienst kennt weder den Plan noch gelesene

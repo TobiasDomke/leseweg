@@ -162,7 +162,11 @@ export async function sendPush(row: Reminder, env: Env, test = false) {
         options: {
           ttl: test ? 300 : 3600,
           urgency: test ? "high" : "normal",
-          topic: test ? "leseweg-test" : "leseweg-daily",
+          // Apple validates base64url decoding as well as the character set.
+          topic: btoa(test ? "leseweg-test" : "leseweg-daily")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=/g, ""),
         },
       },
       subscription,

@@ -357,6 +357,10 @@ assert.equal(
   "A test notification requests immediate delivery",
 );
 assert.match(outgoing.options.headers.authorization, /^vapid t=/);
+assert.equal(
+  Buffer.from(outgoing.options.headers.topic, "base64url").toString(),
+  "leseweg-test",
+);
 const encrypted = Buffer.from(outgoing.options.body);
 const salt = encrypted.subarray(0, 16),
   keyLength = encrypted[20];
@@ -395,6 +399,21 @@ assert.equal(payload.notification.navigate, env.APP_ORIGIN + "/");
 assert.equal(payload.notification.title, "Leseweg");
 assert(!JSON.stringify(payload).includes(token));
 assert(!JSON.stringify(payload).includes("subscription"));
+
+globalThis.fetch = async (_url, options) => {
+  assert.equal(
+    Buffer.from(options.headers.topic, "base64url").toString(),
+    "leseweg-daily",
+  );
+  assert(options.headers.topic.length <= 32);
+  assert.equal(options.headers.urgency, "normal");
+  return new Response(null, { status: 201 });
+};
+try {
+  assert.equal(await sendPush(row(), env), 201);
+} finally {
+  globalThis.fetch = originalFetch;
+}
 
 // Runtime diagnostics must never expose push endpoints or key material.
 const savedWarn = console.warn;
