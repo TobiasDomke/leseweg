@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { languageCodes } from "./languages";
-import { configSchema } from "./actions";
-import { duration, dateAt, isoDate } from "./planner";
+import { configSchema, previousSchema } from "./actions";
+import {
+  duration,
+  dateAt,
+  isoDate,
+  scopeChapters,
+  orderedChapters,
+} from "./planner";
 import type { ReadingState } from "./state";
 import type { Lang } from "./i18n";
 
@@ -20,6 +26,16 @@ const stateSchema = z
     id: z.string().uuid(),
     config: configSchema,
     lang: z.enum(languageCodes),
+    previouslyRead: previousSchema.optional(),
+    completionDays: z
+      .record(
+        z
+          .string()
+          .regex(/^(0|[1-9]\d{0,3})$/)
+          .refine((v) => Number(v) < 1189),
+        z.number().int().min(0).max(3649),
+      )
+      .optional(),
     done: z.record(
       z
         .string()
@@ -75,6 +91,7 @@ const stateSchema = z
     adaptive: z
       .object({
         date,
+        unplanned: previousSchema.optional(),
         days: z
           .array(z.array(z.number().int().min(0).max(1188)).max(1189))
           .max(3650),
@@ -91,7 +108,7 @@ const stateSchema = z
 const schema = z
   .object({
     app: z.literal("leseweg"),
-    version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
     exportedAt: timestamp,
     theme: z.enum(["light", "dark"]),
     state: stateSchema,
@@ -104,7 +121,20 @@ export function parseBackup(raw: string): Backup {
   if (raw.length > maxBackupBytes) throw Error("backup");
   const backup = schema.parse(JSON.parse(raw));
   const days = duration(backup.state.config);
+  const expected = new Set(scopeChapters(backup.state.config).map((c) => c.id));
+  const previous = new Set(backup.state.previouslyRead ?? []);
+  if (
+    [...previous].some((id) => !expected.has(id) || backup.state.done[id]) ||
+    Object.keys(backup.state.done).some((id) => !expected.has(Number(id)))
+  )
+    throw Error("backup");
   if (backup.state.logs.some((log) => log.day >= days)) throw Error("backup");
+  if (
+    Object.entries(backup.state.completionDays ?? {}).some(
+      ([id, day]) => !backup.state.done[id] || day >= days,
+    )
+  )
+    throw Error("backup");
   const pace = backup.state.pace;
   if (pace) {
     const ids = pace.samples.flatMap((sample) => sample.chapters);
@@ -121,6 +151,38 @@ export function parseBackup(raw: string): Backup {
   const adaptive = backup.state.adaptive;
   if (adaptive) {
     const ids = adaptive.days.flat();
+    const pending = adaptive.unplanned ?? [];
+    const scheduled = [...ids, ...pending];
+    if (
+      scheduled.some((id) => !expected.has(id) || previous.has(id)) ||
+      new Set(scheduled).size !== scheduled.length ||
+      pending.some((id) => backup.state.done[id]) ||
+      Object.values(adaptive.extra)
+        .flat()
+        .some((id) => !expected.has(id) || previous.has(id))
+    )
+      throw Error("backup");
+    // Version 4 records overdue chapters explicitly. Legacy files can lack that
+    // list; their remaining chapters are recovered by redistribution as before.
+    if (backup.version === 4) {
+      const accounted = new Set([
+        ...previous,
+        ...Object.keys(backup.state.done).map(Number),
+        ...scheduled,
+        ...Object.values(adaptive.extra).flat(),
+      ]);
+      if (accounted.size !== expected.size) throw Error("backup");
+      // A reopened unit can contain a newly unchecked chapter only in extra.
+      // Recommendations stay stable until completion, so compare the scheduled
+      // subsequence, not that temporarily detached chapter's absolute position.
+      const scheduledIds = new Set(scheduled);
+      const unread = orderedChapters(backup.state.config)
+        .filter((c) => scheduledIds.has(c.id) && !backup.state.done[c.id])
+        .map((c) => c.id);
+      const assigned = scheduled.filter((id) => !backup.state.done[id]);
+      if (unread.some((id, index) => assigned[index] !== id))
+        throw Error("backup");
+    }
     if (
       adaptive.days.length !== days ||
       ids.length !== new Set(ids).size ||
@@ -156,13 +218,24 @@ export function makeBackup(
         at: new Date(now).toISOString(),
       });
   }
+  if (snapshot.adaptive) {
+    const accounted = new Set([
+      ...(snapshot.previouslyRead ?? []),
+      ...Object.keys(snapshot.done).map(Number),
+      ...snapshot.adaptive.days.flat(),
+      ...Object.values(snapshot.adaptive.extra).flat(),
+    ]);
+    snapshot.adaptive.unplanned = orderedChapters(snapshot.config)
+      .filter((c) => !accounted.has(c.id))
+      .map((c) => c.id);
+  }
   snapshot.timer = null;
   snapshot.ops = [];
   snapshot.lang = lang;
   return JSON.stringify(
     {
       app: "leseweg",
-      version: 3,
+      version: 4,
       exportedAt: new Date(now).toISOString(),
       theme: theme === "dark" ? "dark" : "light",
       state: snapshot,

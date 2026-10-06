@@ -595,9 +595,9 @@ const rows = {
     "This duration means a lot of reading each day. A longer plan will be easier to follow.",
   ],
   completePlan: [
-    "Du hast die ganze Bibel gelesen.",
-    "Ты прочитал всю Библию.",
-    "You have read the whole Bible.",
+    "Du hast alle Kapitel deines Plans gelesen.",
+    "Ты прочитал все главы своего плана.",
+    "You have read every chapter in your plan.",
   ],
   future: [
     "Dein Plan startet am",

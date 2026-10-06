@@ -14,7 +14,7 @@ export function paceState(state: ReadingState): PaceState {
   if (state.pace) return state.pace;
   const finished =
     state.adaptive?.finished ??
-    createPlan(state.config)
+    createPlan(state.config, state.previouslyRead)
       .filter(
         (day) =>
           day.chapters.length > 0 &&

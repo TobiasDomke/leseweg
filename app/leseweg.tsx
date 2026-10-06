@@ -58,7 +58,7 @@ import {
 import {
   createPlan,
   chapters,
-  totalWords,
+  scopeChapters,
   today,
   dateAt,
   addDays,
@@ -71,6 +71,9 @@ import { readingPace, estimatedMinutes } from "@/lib/pace";
 import { applyAction } from "@/lib/actions";
 import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
 import PlannerForm from "./planner-form";
+import PlanManagement from "./plan-management";
+import ReadingContext from "./reading-context";
+import { planText, fill } from "@/lib/plan-i18n";
 import { readState, changeState } from "@/lib/local-storage";
 import { useOffline } from "@/lib/offline";
 import BackupControls from "./backup-controls";
@@ -106,6 +109,7 @@ export default function Leseweg() {
     [reminderTime, setReminderTime] = useState("07:30"),
     [zone, setZone] = useState("Europe/Berlin");
   const offlineSupport = useOffline();
+  const p = planText(lang);
   const t = text(lang),
     names = bookNames(lang),
     pending = useRef(false),
@@ -250,6 +254,14 @@ export default function Leseweg() {
   const pace = useMemo(() => readingPace(state), [state]);
   const estimate = (words: number) => estimatedMinutes(words, pace);
   const dateIndex = state ? dayIndex(state.config, currentDate) : 0;
+  const scoped = scopeChapters(state?.config ?? {});
+  const totalWords = scoped.reduce((sum, c) => sum + c.words, 0);
+  const priorIds = state?.previouslyRead ?? [];
+  const previousWords = priorIds.reduce(
+    (sum, id) => sum + chapters[id].words,
+    0,
+  );
+  const previousSeconds = Math.round(previousWords * pace.secondsPerWord);
   const day =
       days[
         Math.max(
@@ -257,9 +269,12 @@ export default function Leseweg() {
           Math.min(days.length - 1, selected ?? state?.timer?.day ?? dateIndex),
         )
       ],
-    doneSet = state?.done ?? {},
+    doneSet: Record<string, string> = {
+      ...Object.fromEntries(priorIds.map((id) => [id, "previous"])),
+      ...state?.done,
+    },
     doneCount = Object.keys(doneSet).length,
-    readWords = chapters
+    readWords = scoped
       .filter((c) => doneSet[c.id])
       .reduce((s, c) => s + c.words, 0),
     percent = Math.round((readWords / totalWords) * 1000) / 10,
@@ -289,8 +304,8 @@ export default function Leseweg() {
     setTab("today");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const saveConfig = async (config: Config) => {
-    const s = await mutate({ action: "create", config, lang });
+  const saveConfig = async (config: Config, previouslyRead: number[]) => {
+    const s = await mutate({ action: "create", config, previouslyRead, lang });
     if (s) {
       setNewPlan(false);
       setSelected(null);
@@ -321,7 +336,7 @@ export default function Leseweg() {
       planState && day ? nextExtraChapter(planState, day.index) : undefined,
     remainingWords = totalWords - readWords,
     remainingDays = Math.max(0, days.length - dateIndex - 1),
-    remainingChapters = chapters.length - doneCount;
+    remainingChapters = scoped.length - doneCount;
   const finishingPace = useMemo(() => {
     if (!state || !day || !finishing) return pace;
     try {
@@ -385,7 +400,11 @@ export default function Leseweg() {
               return s
                 ? {
                     days: createPlan(s.config).length,
-                    chaptersRead: Object.keys(s.done).length,
+                    chaptersRead:
+                      Object.keys(s.done).length +
+                      (s.previouslyRead?.length ?? 0),
+                    previouslyRead: s.previouslyRead?.length ?? 0,
+                    chaptersInScope: scopeChapters(s.config).length,
                     measuredSeconds: s.logs.reduce((n, l) => n + l.seconds, 0),
                     timerRunning: !!s.timer,
                   }
@@ -460,7 +479,13 @@ export default function Leseweg() {
             {message === "saved"
               ? t.saved
               : message === "replanned"
-                ? t.replanned
+                ? t.replanned +
+                  (remainingDays > 0 && remainingChapters > 0
+                    ? " " +
+                      fill(p.workload, {
+                        minutes: estimate(remainingWords / remainingDays),
+                      })
+                    : "")
                 : t.timerStopped}
           </p>
         )}
@@ -532,9 +557,11 @@ export default function Leseweg() {
                 <div>
                   <span className="eyebrow">{fmt(currentDate, true)}</span>
                   <h1>
-                    {doneCount === chapters.length ? t.completePlan : t.welcome}
+                    {doneCount === scoped.length ? t.completePlan : t.welcome}
                   </h1>
-                  <p>{t.edition}</p>
+                  <p>
+                    {t.edition} · {p[state.config.scope ?? "bible"]}
+                  </p>
                 </div>
                 <div className="goal-chip">
                   <CalendarDays size={16} />
@@ -548,6 +575,13 @@ export default function Leseweg() {
               )}
               {remainingChapters > 0 && currentDate > days.at(-1)!.date && (
                 <p className="warning">{t.deadlinePassed}</p>
+              )}
+              {!!planState?.adaptive?.unplanned?.length && (
+                <p className="warning">
+                  {fill(p.unscheduled, {
+                    count: planState.adaptive.unplanned.length,
+                  })}
+                </p>
               )}
               {!canRead && (
                 <div className="catchup-bar">
@@ -592,6 +626,11 @@ export default function Leseweg() {
                       </span>
                     )}
                   </div>
+                  <ReadingContext
+                    config={state.config}
+                    items={sessionItems}
+                    lang={lang}
+                  />
                   <p className="muted session-intro">
                     {dayDone
                       ? t.sessionSaved
@@ -781,13 +820,13 @@ export default function Leseweg() {
                     </div>
                     <Progress value={percent} aria-label={t.progress} />
                     <p className="muted">
-                      {doneCount.toLocaleString(locales[lang])} / 1.189{" "}
-                      {t.chapters}
+                      {doneCount.toLocaleString(locales[lang])} /{" "}
+                      {scoped.length.toLocaleString(locales[lang])} {t.chapters}
                       <small>{t.byText}</small>
                     </p>
                     <div className="compact-stat">
                       <Clock3 size={19} />
-                      <span>{t.totalTime}</span>
+                      <span>{p.measured}</span>
                       <strong>
                         {Math.floor(totalSeconds / 60)} {t.min}
                       </strong>
@@ -847,7 +886,19 @@ export default function Leseweg() {
                   {t.target}: {fmt(days.at(-1)!.date, true)}
                 </span>
                 <h1>{t.plan}</h1>
+                <p>
+                  {p[state.config.scope ?? "bible"]} ·{" "}
+                  {p[state.config.order ?? "canonical"]}
+                </p>
                 <p>{t.planSub}</p>
+                <p className="local-note">
+                  {fill(p.coverage, {
+                    total: scoped.length,
+                    previous: priorIds.length,
+                    completed: Object.keys(state.done).length,
+                    remaining: remainingChapters,
+                  })}
+                </p>
               </div>
               <div className="panel plan-list">
                 {days.slice(page * 14, page * 14 + 14).map((d) => {
@@ -932,7 +983,7 @@ export default function Leseweg() {
               <div className="stats-grid">
                 {[
                   [
-                    t.totalTime,
+                    p.measured,
                     `${Math.floor(totalSeconds / 60)}`,
                     t.min,
                     Clock3,
@@ -945,13 +996,13 @@ export default function Leseweg() {
                     t.min,
                     BarChart3,
                   ],
+                  [t.units, String(completedUnits), "", CircleCheck],
                   [
-                    t.units,
-                    String(completedUnits),
-                    `/ ${days.filter((d) => d.chapters.length).length}`,
-                    CircleCheck,
+                    t.chapters,
+                    String(doneCount),
+                    `/ ${scoped.length.toLocaleString(locales[lang])}`,
+                    BookOpen,
                   ],
-                  [t.chapters, String(doneCount), "/ 1.189", BookOpen],
                 ].map(([label, value, unit, Icon]) => {
                   const I = Icon as typeof Clock3;
                   return (
@@ -966,6 +1017,35 @@ export default function Leseweg() {
                   );
                 })}
               </div>
+              {priorIds.length > 0 && (
+                <section className="panel pace-panel">
+                  <h2>{p.previous}</h2>
+                  <p className="muted">
+                    {fill(p.selected, { count: priorIds.length })}
+                  </p>
+                  <div className="past-time-stats">
+                    <div>
+                      <span>{p.estimatedPast}</span>
+                      <strong>
+                        {Math.round(previousSeconds / 60).toLocaleString(
+                          locales[lang],
+                        )}{" "}
+                        {t.min}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{p.includingEstimate}</span>
+                      <strong>
+                        {Math.round(
+                          (totalSeconds + previousSeconds) / 60,
+                        ).toLocaleString(locales[lang])}{" "}
+                        {t.min}
+                      </strong>
+                    </div>
+                  </div>
+                  <p className="muted">{p.pastNote}</p>
+                </section>
+              )}
               <section className="panel pace-panel">
                 <div className="pace-heading">
                   <Clock3 size={20} />
@@ -1165,6 +1245,12 @@ export default function Leseweg() {
                   <p className="fineprint">{t.calendarNote}</p>
                 </section>
                 <div className="settings-stack">
+                  <PlanManagement
+                    state={state}
+                    lang={lang}
+                    busy={busy}
+                    mutate={mutate}
+                  />
                   <BackupControls
                     state={state}
                     lang={lang}

@@ -16,6 +16,9 @@ export type ReadingState = {
   config: Config;
   lang: Lang;
   done: Record<string, string>;
+  previouslyRead?: number[];
+  // Keep completed units stable when a formerly expired plan is extended.
+  completionDays?: Record<string, number>;
   logs: TimeLog[];
   timer: { day: number; startedAt: number } | null;
   ops: string[];
@@ -25,6 +28,7 @@ export type ReadingState = {
     days: number[][];
     finished: number[];
     extra: Record<string, number[]>;
+    unplanned?: number[];
   };
 };
 export function daySeconds(state: ReadingState, day: number, now = Date.now()) {

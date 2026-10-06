@@ -1,4 +1,5 @@
 import books from "./bible-lengths.json";
+import { chronologicalBlocks, cohesiveReferences } from "./reading-order";
 export type Unit = "days" | "weeks" | "months";
 export type Config = {
   amount: number;
@@ -6,6 +7,9 @@ export type Config = {
   start: string;
   time: string;
   timezone: string;
+  scope?: "bible" | "ot" | "nt";
+  order?: "canonical" | "chronological" | "mixed";
+  keepTogether?: boolean;
 };
 export type Chapter = {
   id: number;
@@ -82,13 +86,139 @@ export type Day = {
   chapters: Chapter[];
   words: number;
 };
-export function createPlan(config: Config): Day[] {
-  return distributeChapters(chapters, duration(config), config.start);
+export function scopeChapters(config: Pick<Config, "scope">) {
+  return chapters.filter((c) =>
+    config.scope === "ot"
+      ? c.bookIndex < 39
+      : config.scope === "nt"
+        ? c.bookIndex >= 39
+        : true,
+  );
+}
+export function referenceChapters(refs: string): Chapter[] {
+  return refs.split(";").flatMap((part) => {
+    const [code, ranges] = part.trim().split(/\s+/);
+    if (!ranges) throw Error("reference");
+    return ranges.split(",").flatMap((range) => {
+      const [first, last = first] = range.split("-").map(Number);
+      const found = chapters.filter(
+        (c) => c.code === code && c.number >= first && c.number <= last,
+      );
+      if (found.length !== last - first + 1 || first < 1)
+        throw Error("reference");
+      return found;
+    });
+  });
+}
+export const historicalGroups = chronologicalBlocks.map((block, index) => ({
+  ...block,
+  id: index,
+  chapters: referenceChapters(block.refs),
+}));
+const chronological = historicalGroups.flatMap((group) => group.chapters);
+export function assertCoverage(expected: Chapter[], ids: number[]) {
+  const wanted = new Set(expected.map((c) => c.id));
+  if (
+    ids.length !== wanted.size ||
+    new Set(ids).size !== ids.length ||
+    ids.some((id) => !wanted.has(id))
+  )
+    throw Error("coverage");
+}
+assertCoverage(
+  chapters,
+  chronological.map((c) => c.id),
+);
+
+// Weighted interleaving keeps every stream's internal order and finishes them
+// together. It is deterministic, so extra reading follows the same order.
+function mixedChapters(items: Chapter[]) {
+  const streams = [
+    items.filter(
+      (c) => c.bookIndex < 17 || (c.bookIndex >= 22 && c.bookIndex < 39),
+    ),
+    items.filter((c) => c.bookIndex >= 17 && c.bookIndex < 22),
+    items.filter((c) => c.bookIndex >= 39 && c.bookIndex <= 43),
+    items.filter((c) => c.bookIndex > 43),
+  ]
+    .filter((s) => s.length)
+    .map((items) => ({
+      items,
+      cursor: 0,
+      read: 0,
+      total: items.reduce((s, c) => s + c.words, 0),
+    }));
+  const result: Chapter[] = [];
+  while (result.length < items.length) {
+    const stream = streams
+      .filter((s) => s.cursor < s.items.length)
+      .sort((a, b) => a.read / a.total - b.read / b.total)[0];
+    const chapter = stream.items[stream.cursor++];
+    result.push(chapter);
+    stream.read += chapter.words;
+  }
+  return result;
+}
+const orderCache = new Map<string, Chapter[]>();
+export function orderedChapters(config: Config) {
+  const key = `${config.scope ?? "bible"}:${config.order ?? "canonical"}`;
+  const cached = orderCache.get(key);
+  if (cached) return cached;
+  const ordered = buildOrder(config);
+  orderCache.set(key, ordered);
+  return ordered;
+}
+function buildOrder(config: Config) {
+  const scope = scopeChapters(config);
+  if (config.order === "mixed") return mixedChapters(scope);
+  if (config.order === "chronological") {
+    const ids = new Set(scope.map((c) => c.id));
+    return chronological.filter((c) => ids.has(c.id));
+  }
+  return scope;
+}
+const cohesiveGroups = cohesiveReferences.map(referenceChapters);
+export function boundaryPreference(config: Config) {
+  if (!config.keepTogether) return undefined;
+  const groups =
+    config.order === "chronological"
+      ? historicalGroups.map((g) => g.chapters)
+      : cohesiveGroups;
+  const membership = new Map(
+    groups.flatMap((group, i) => group.map((c) => [c.id, i] as const)),
+  );
+  return (a: Chapter, b: Chapter) =>
+    membership.get(a.id) !== membership.get(b.id) || !membership.has(a.id);
+}
+export function createPlan(
+  config: Config,
+  previouslyRead: number[] = [],
+): Day[] {
+  const items = orderedChapters(config);
+  const previous = new Set(previouslyRead);
+  const allowed = new Set(items.map((c) => c.id));
+  if (
+    previous.size !== previouslyRead.length ||
+    previouslyRead.some((id) => !allowed.has(id))
+  )
+    throw Error("prior");
+  const plan = distributeChapters(
+    items.filter((c) => !previous.has(c.id)),
+    duration(config),
+    config.start,
+    boundaryPreference(config),
+  );
+  assertCoverage(items, [
+    ...previouslyRead,
+    ...plan.flatMap((day) => day.chapters.map((c) => c.id)),
+  ]);
+  return plan;
 }
 export function distributeChapters(
   items: Chapter[],
   days: number,
   start: string,
+  preferredBoundary?: (a: Chapter, b: Chapter) => boolean,
 ): Day[] {
   if (days < 1) return [];
   const result: Day[] = Array.from({ length: days }, (_, i) => ({
@@ -122,6 +252,35 @@ export function distributeChapters(
         Math.abs(day.words + items[cursor].words - target) <=
           Math.abs(day.words - target))
     );
+    if (preferredBoundary && remainingDays > 1) {
+      const begin = cursor - day.chapters.length;
+      const baseline = Math.abs(day.words - target);
+      let bestEnd = cursor,
+        bestWords = day.words;
+      let bestCost =
+        baseline +
+        (preferredBoundary(items[cursor - 1], items[cursor])
+          ? 0
+          : target * 0.2);
+      let words = 0;
+      for (let end = begin + 1; end <= lastExclusive; end++) {
+        words += items[end - 1].words;
+        if (Math.abs(words - target) <= baseline + target * 0.25) {
+          const cost =
+            Math.abs(words - target) +
+            (preferredBoundary(items[end - 1], items[end]) ? 0 : target * 0.2);
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestEnd = end;
+            bestWords = words;
+          }
+        }
+        if (words > target + baseline + target * 0.25) break;
+      }
+      cursor = bestEnd;
+      day.chapters = items.slice(begin, cursor);
+      day.words = bestWords;
+    }
     remainingWords -= day.words;
   }
   return result;

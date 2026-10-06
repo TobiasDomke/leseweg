@@ -1,5 +1,8 @@
 import {
   chapters,
+  orderedChapters,
+  boundaryPreference,
+  assertCoverage,
   createPlan,
   duration,
   dateAt,
@@ -23,23 +26,42 @@ export function dayIndex(config: Config, date: string) {
   );
 }
 
+export function completionDay(state: ReadingState, chapter: number) {
+  return (
+    state.completionDays?.[chapter] ??
+    dayIndex(state.config, state.done[chapter])
+  );
+}
+
 // Rebuild only recommendations. Historical rows reflect what was actually read,
 // never the former recommendation. The original last date is kept exactly.
 export function redistribute(state: ReadingState, from: number, date: string) {
   const count = duration(state.config);
   const history: number[][] = Array.from({ length: count }, () => []);
-  for (const c of chapters) {
-    if (state.done[c.id])
-      history[dayIndex(state.config, state.done[c.id])].push(c.id);
+  const ordered = orderedChapters(state.config);
+  const previous = new Set(state.previouslyRead ?? []);
+  for (const c of ordered) {
+    if (state.done[c.id]) history[completionDay(state, c.id)].push(c.id);
   }
-  const remaining = chapters.filter((c) => !state.done[c.id]);
+  const remaining = ordered.filter(
+    (c) => !state.done[c.id] && !previous.has(c.id),
+  );
   const future = distributeChapters(
     remaining,
     count - from,
     addDays(state.config.start, from),
+    boundaryPreference(state.config),
   );
+  assertCoverage(ordered, [
+    ...(state.previouslyRead ?? []),
+    ...Object.keys(state.done).map(Number),
+    ...(from >= count
+      ? remaining.map((c) => c.id)
+      : future.flatMap((day) => day.chapters.map((c) => c.id))),
+  ]);
   state.adaptive = {
     date,
+    unplanned: from >= count ? remaining.map((c) => c.id) : [],
     days: history.map((read, index) =>
       index < from
         ? read
@@ -67,7 +89,7 @@ export function prepareState(
       date,
       days: [],
       extra: {},
-      finished: createPlan(copy.config)
+      finished: createPlan(copy.config, copy.previouslyRead)
         .filter(
           (day) =>
             day.date <= date &&
@@ -102,16 +124,21 @@ export function sessionChapters(state: ReadingState, day: number) {
     ...(state.adaptive?.days[day] ?? []),
     ...(state.adaptive?.extra[day] ?? []),
   ]);
-  return chapters.filter((c) => ids.has(c.id));
+  return orderedChapters(state.config).filter((c) => ids.has(c.id));
 }
 
 export function nextExtraChapter(state: ReadingState, day: number) {
   const present = new Set(sessionChapters(state, day).map((c) => c.id));
-  return chapters.find((c) => !state.done[c.id] && !present.has(c.id));
+  return orderedChapters(state.config).find(
+    (c) =>
+      !state.done[c.id] &&
+      !state.previouslyRead?.includes(c.id) &&
+      !present.has(c.id),
+  );
 }
 
 export function readChaptersOnDay(state: ReadingState, day: number) {
-  return chapters.filter(
-    (c) => state.done[c.id] && dayIndex(state.config, state.done[c.id]) === day,
+  return orderedChapters(state.config).filter(
+    (c) => state.done[c.id] && completionDay(state, c.id) === day,
   );
 }

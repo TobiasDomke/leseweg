@@ -11,7 +11,17 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 
 ## Funktionen
 
-- Dauer in Tagen, Wochen oder Kalendermonaten; 66 Bücher und 1.189 Kapitel.
+- Dauer in Tagen, Wochen oder Kalendermonaten; gesamte Bibel (66 Bücher/1.189 Kapitel),
+  Altes Testament (39/929) oder Neues Testament (27/260).
+- Biblische Reihenfolge, chronologische Zusammenhänge oder ausgewogen wechselnde
+  Lesestränge; optional bekannte Kapitelgruppen zusammenhalten.
+- Bereits gelesene Bücher, Kapitelbereiche oder Einzelkapitel beim Einstieg markieren
+  und später korrigieren. Früherer Fortschritt zählt zur Statistik; die historische
+  Lesezeit wird separat geschätzt und beeinflusst den gemessenen Durchschnitt nicht.
+- Vollständigkeitsprüfung anhand jedes einzelnen Kapitels; keine Lücken durch
+  vorheriges Lesen, zusätzliche Kapitel oder einen abgelaufenen Zieltermin.
+- Zieltermin in den Einstellungen verlängern, ohne Fortschritt und Zeitmessungen
+  zurückzusetzen. Ohne Verlängerung bleibt der gewählte Termin bestehen.
 - Gewichtung nach Wortzahl, ohne Kapitel aufzuteilen.
 - Dynamische Tagesempfehlungen: weniger oder mehr lesen; erst beim Beenden die
   offenen Kapitel auf die verbleibenden Tage bis zum unveränderten Zieldatum verteilen.
@@ -27,6 +37,9 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 - Offlinebetrieb, Startbildschirmsymbol und Updates mit Nutzerbestätigung.
 - Optionale tägliche Push-Erinnerungen mit Zeitzone, Testnachricht und Ausschalter
   pro Gerät, sobald der Betreiber den Erinnerungsdienst eingerichtet hat.
+
+Die Lesereihenfolgen, ihre historischen Grenzen und die Prüfungen sind in
+[READING-PLANS.md](READING-PLANS.md) dokumentiert.
 
 Die Wortzahlen stammen aus der gemeinfreien Lutherbibel 1912
 ([Datenquelle](https://github.com/midvash/bible-data)). Sie dienen als Näherung

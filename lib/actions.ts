@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { languageCodes } from "./languages";
-import { createPlan, today } from "./planner";
+import { createPlan, today, scopeChapters, duration, dateAt } from "./planner";
 import {
   prepareState,
   dayIndex,
   redistribute,
   nextExtraChapter,
+  completionDay,
 } from "./adaptive";
 import type { ReadingState } from "./state";
 import {
@@ -17,6 +18,9 @@ import {
 } from "./pace";
 export const configSchema = z
   .object({
+    scope: z.enum(["bible", "ot", "nt"]).optional(),
+    order: z.enum(["canonical", "chronological", "mixed"]).optional(),
+    keepTogether: z.boolean().optional(),
     amount: z.number().int().min(1).max(3650),
     unit: z.enum(["days", "weeks", "months"]),
     start: z.string(),
@@ -34,7 +38,27 @@ export const configSchema = z
       }),
   })
   .strict();
+export const previousSchema = z
+  .array(z.number().int().min(0).max(1188))
+  .max(1189)
+  .refine((ids) => new Set(ids).size === ids.length);
 const requestSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("previous"),
+      previouslyRead: previousSchema,
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("deadline"),
+      end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
   z
     .object({
       action: z.enum(["extend", "reopen"]),
@@ -47,6 +71,7 @@ const requestSchema = z.discriminatedUnion("action", [
     .object({
       action: z.literal("create"),
       config: configSchema,
+      previouslyRead: previousSchema.optional(),
       lang: z.enum(languageCodes),
       planId: z.string().nullable(),
       opId: z.string().uuid(),
@@ -112,7 +137,7 @@ export function applyAction(
   if (op.action === "create") {
     if ((state?.id ?? null) !== op.planId) throw Error("stale");
     try {
-      createPlan(op.config);
+      createPlan(op.config, op.previouslyRead);
     } catch {
       throw Error("invalid");
     }
@@ -121,6 +146,7 @@ export function applyAction(
       config: op.config,
       lang: op.lang,
       done: {},
+      previouslyRead: op.previouslyRead ?? [],
       logs: [],
       timer: null,
       ops: [],
@@ -128,7 +154,7 @@ export function applyAction(
     };
   } else {
     if (!state || state.id !== op.planId) throw Error("stale");
-    const days = createPlan(state.config);
+    const days = createPlan(state.config, state.previouslyRead);
     if ("day" in op && op.day >= days.length) throw Error("invalid");
     const date = today(state.config.timezone, now);
     const currentDay = dayIndex(state.config, date);
@@ -155,11 +181,63 @@ export function applyAction(
         });
       state.timer = null;
     }
+    if (op.action === "previous") {
+      if (state.timer) throw Error("timer");
+      const allowed = new Set(scopeChapters(state.config).map((c) => c.id));
+      if (op.previouslyRead.some((id) => !allowed.has(id) || state!.done[id]))
+        throw Error("invalid");
+      state.previouslyRead = op.previouslyRead;
+      redistribute(
+        state,
+        currentDay + (state.adaptive!.finished.includes(currentDay) ? 1 : 0),
+        date,
+      );
+    }
+    if (op.action === "deadline") {
+      if (state.timer) throw Error("timer");
+      if (op.end < date || op.end < days.at(-1)!.date) throw Error("invalid");
+      const config = {
+        ...state.config,
+        unit: "days" as const,
+        amount:
+          Math.round(
+            (dateAt(op.end).getTime() - dateAt(state.config.start).getTime()) /
+              86400000,
+          ) + 1,
+      };
+      if (
+        !Number.isFinite(config.amount) ||
+        dateAt(op.end).toISOString().slice(0, 10) !== op.end
+      )
+        throw Error("invalid");
+      duration(config);
+      state.completionDays = Object.fromEntries(
+        Object.keys(state.done).map((id) => [
+          id,
+          completionDay(state!, Number(id)),
+        ]),
+      );
+      state.config = config;
+      const newDay = dayIndex(config, date);
+      redistribute(
+        state,
+        newDay + (state.adaptive!.finished.includes(newDay) ? 1 : 0),
+        date,
+      );
+    }
     if (op.action === "chapter") {
+      if (
+        state.previouslyRead?.includes(op.chapter) ||
+        !scopeChapters(state.config).some((c) => c.id === op.chapter)
+      )
+        throw Error("invalid");
       if (state.adaptive!.finished.includes(currentDay))
         throw Error("finished");
-      if (op.done) state.done[String(op.chapter)] = date;
-      else {
+      if (op.done) {
+        state.done[String(op.chapter)] = date;
+        if (state.completionDays) state.completionDays[op.chapter] = currentDay;
+      } else {
+        if (state.completionDays) delete state.completionDays[op.chapter];
         delete state.done[String(op.chapter)];
         forgetPaceChapter(state, op.chapter);
       }
