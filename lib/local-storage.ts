@@ -10,7 +10,7 @@ async function transaction(
 ): Promise<ReadingState | null> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     // Reject writes from still-open old app versions after chapter IDs migrate.
-    const request = indexedDB.open("leseweg-local", 3);
+    const request = indexedDB.open("leseweg-local", 4);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains("reading"))
         request.result.createObjectStore("reading");

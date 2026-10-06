@@ -5,6 +5,10 @@ import { z } from "zod";
 import { languageCodes } from "./languages";
 import { bookOrders, languageBookOrder } from "./book-order";
 import {
+  isBible52,
+  bible52Config,
+  bible52Units,
+  bible52ChapterUnit,
   createPlan,
   today,
   scopeChapters,
@@ -29,6 +33,7 @@ import {
 } from "./pace";
 export const configSchema = z
   .object({
+    template: z.literal("bible52").optional(),
     edition: z.enum(editionIds).optional(),
     scope: z.enum(["bible", "ot", "nt"]).optional(),
     order: z.enum(["canonical", "chronological", "mixed"]).optional(),
@@ -193,6 +198,7 @@ export function applyAction(
   if (state) state.pace = paceState(state);
   if (op.action === "create") {
     if ((state?.id ?? null) !== op.planId) throw Error("stale");
+    if (isBible52(op.config)) op.config = bible52Config(op.config);
     op.config.edition ??= languageEdition(op.lang);
     // Each new plan pins a concrete edition; older stored plans retain their basis.
     if (op.config.bookOrderMode === "auto")
@@ -210,6 +216,7 @@ export function applyAction(
       config: op.config,
       lang: op.lang,
       done: {},
+      ...(isBible52(op.config) ? { completionDays: {} } : {}),
       previouslyRead: op.previouslyRead ?? [],
       sessions: [],
       logs: [],
@@ -219,6 +226,29 @@ export function applyAction(
     };
   } else {
     if (!state || state.id !== op.planId) throw Error("stale");
+    const fixed = isBible52(state.config);
+    if (
+      fixed &&
+      ["edition", "book-order", "deadline", "extend"].includes(op.action)
+    )
+      throw Error("invalid");
+    const openUnit = state.timer?.day ?? state.pace?.draft?.day;
+    const requestedUnit =
+      op.action === "chapter"
+        ? bible52ChapterUnit[op.chapter]
+        : "day" in op
+          ? op.day
+          : undefined;
+    if (
+      fixed &&
+      openUnit !== undefined &&
+      (op.action === "previous" ||
+        (["chapter", "timer", "complete", "reopen", "correct"].includes(
+          op.action,
+        ) &&
+          requestedUnit !== openUnit))
+    )
+      throw Error("timer");
     state.sessions = sessionsFor(state);
     const days = createPlan(state.config, state.previouslyRead);
     if ("day" in op && op.day >= days.length) throw Error("invalid");
@@ -227,6 +257,7 @@ export function applyAction(
     if (op.action === "timer" && state.timer && state.timer.day !== op.day)
       throw Error("timer");
     if (
+      !fixed &&
       "day" in op &&
       op.action !== "correct" &&
       op.day !== currentDay &&
@@ -266,6 +297,16 @@ export function applyAction(
       if (op.previouslyRead.some((id) => !allowed.has(id) || state!.done[id]))
         throw Error("invalid");
       state.previouslyRead = op.previouslyRead;
+      if (fixed) {
+        // Confirming prior progress also closes mixed units containing chapters
+        // already measured in the app; they need no empty completion session.
+        const previous = new Set(op.previouslyRead);
+        state.adaptive!.finished = bible52Units
+          .filter((u) =>
+            u.chapters.every((c) => previous.has(c.id) || state!.done[c.id]),
+          )
+          .map((u) => u.index);
+      }
       redistribute(
         state,
         currentDay + (state.adaptive!.finished.includes(currentDay) ? 1 : 0),
@@ -310,11 +351,14 @@ export function applyAction(
         !scopeChapters(state.config).some((c) => c.id === op.chapter)
       )
         throw Error("invalid");
-      if (state.adaptive!.finished.includes(currentDay))
+      if (!fixed && state.adaptive!.finished.includes(currentDay))
         throw Error("finished");
       if (op.done) {
         state.done[String(op.chapter)] = date;
-        if (state.completionDays) state.completionDays[op.chapter] = currentDay;
+        if (state.completionDays)
+          state.completionDays[op.chapter] = fixed
+            ? bible52ChapterUnit[op.chapter]
+            : currentDay;
       } else {
         if (state.completionDays) delete state.completionDays[op.chapter];
         delete state.done[String(op.chapter)];
@@ -327,7 +371,10 @@ export function applyAction(
       const recorded = new Set(state.sessions!.flatMap((s) => s.chapters));
       const ids = Object.keys(state.done)
         .map(Number)
-        .filter((id) => !recorded.has(id));
+        .filter(
+          (id) =>
+            !recorded.has(id) && (!fixed || bible52ChapterUnit[id] === op.day),
+        );
       const seconds = Math.max(
         0,
         state.logs
@@ -338,7 +385,7 @@ export function applyAction(
             .reduce((n, s) => n + s.seconds, 0),
       );
       if (
-        !state.adaptive!.finished.includes(currentDay) &&
+        !state.adaptive!.finished.includes(fixed ? op.day : currentDay) &&
         (ids.length || seconds > 0)
       )
         state.sessions!.push({
@@ -351,9 +398,18 @@ export function applyAction(
           seconds,
         });
       finishPace(state, op.day, op.paceChoice);
-      state.adaptive!.finished = [
-        ...new Set([...state.adaptive!.finished, currentDay]),
-      ];
+      if (
+        !fixed ||
+        bible52Units[op.day].chapters.every(
+          (c) => state!.done[c.id] || state!.previouslyRead?.includes(c.id),
+        )
+      )
+        state.adaptive!.finished = [
+          ...new Set([
+            ...state.adaptive!.finished,
+            fixed ? op.day : currentDay,
+          ]),
+        ];
       redistribute(state, currentDay + 1, date);
     }
     if (op.action === "extend") {
@@ -413,7 +469,9 @@ export function applyAction(
         dates.set(
           active
             ? today(state.config.timezone, active.startedAt)
-            : addDays(state.config.start, op.day),
+            : fixed
+              ? date
+              : addDays(state.config.start, op.day),
           0,
         );
       state.logs = state.logs.filter((l) => l.day !== op.day);
@@ -441,10 +499,13 @@ export function applyAction(
       state.config.time = op.time;
       state.config.timezone = op.timezone;
     }
+    if (fixed && (op.action === "language" || op.action === "settings"))
+      state.lang = op.lang;
     if (
-      op.action === "language" ||
-      (op.action === "settings" && state.lang !== op.lang) ||
-      op.action === "book-order"
+      !fixed &&
+      (op.action === "language" ||
+        (op.action === "settings" && state.lang !== op.lang) ||
+        op.action === "book-order")
     ) {
       state.lang = op.lang;
       if (op.action === "book-order")

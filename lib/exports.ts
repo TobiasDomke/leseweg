@@ -1,4 +1,4 @@
-import { passage, scopeChapters } from "./planner";
+import { isBible52, passage, scopeChapters } from "./planner";
 import { planText } from "./plan-i18n";
 import { readingPace, estimatedMinutes } from "./pace";
 import { bookNames, text, type Lang } from "./i18n";
@@ -62,7 +62,7 @@ export function calendarFile(state: ReadingState, lang: Lang, origin: string) {
   const estimate = (words: number) => estimatedMinutes(words, pace);
   const pace = readingPace(state);
   const t = text(lang),
-    names = bookNames(lang),
+    names = bookNames(isBible52(state.config) ? "de" : lang),
     lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -101,7 +101,7 @@ export function calendarFile(state: ReadingState, lang: Lang, origin: string) {
 export function csvFile(state: ReadingState, lang: Lang) {
   const pace = readingPace(state);
   const t = text(lang),
-    names = bookNames(lang);
+    names = bookNames(isBible52(state.config) ? "de" : lang);
   const previous = scopeChapters(state.config).filter((c) =>
     state.previouslyRead?.includes(c.id),
   );

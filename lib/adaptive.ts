@@ -1,4 +1,7 @@
 import {
+  isBible52,
+  bible52Units,
+  bible52ChapterUnit,
   chaptersFor,
   orderedChapters,
   boundaryPreference,
@@ -28,6 +31,7 @@ export function dayIndex(config: Config, date: string) {
 }
 
 export function completionDay(state: ReadingState, chapter: number) {
+  if (isBible52(state.config)) return bible52ChapterUnit[chapter];
   return (
     state.completionDays?.[chapter] ??
     dayIndex(state.config, state.done[chapter])
@@ -37,6 +41,27 @@ export function completionDay(state: ReadingState, chapter: number) {
 // Rebuild only recommendations. Historical rows reflect what was actually read,
 // never the former recommendation. The original last date is kept exactly.
 export function redistribute(state: ReadingState, from: number, date: string) {
+  if (isBible52(state.config)) {
+    const previous = new Set(state.previouslyRead ?? []);
+    const closed = new Set(state.adaptive?.finished ?? []);
+    state.adaptive = {
+      date,
+      days: createPlan(state.config, [...previous]).map((d) =>
+        d.chapters.map((c) => c.id),
+      ),
+      finished: bible52Units
+        .filter(
+          (u) =>
+            u.chapters.every((c) => previous.has(c.id)) ||
+            (closed.has(u.index) &&
+              u.chapters.every((c) => previous.has(c.id) || state.done[c.id])),
+        )
+        .map((u) => u.index),
+      extra: {},
+      unplanned: [],
+    };
+    return;
+  }
   const count = duration(state.config);
   const history: number[][] = Array.from({ length: count }, () => []);
   const ordered = orderedChapters(state.config);
@@ -79,6 +104,12 @@ export function prepareState(
   state: ReadingState,
   date = today(state.config.timezone),
 ): ReadingState {
+  if (isBible52(state.config)) {
+    const copy = structuredClone(state);
+    delete copy.pendingBookOrder;
+    redistribute(copy, 0, date);
+    return copy;
+  }
   const correcting = state.chapterSchema !== 2;
   if (correcting) state = migrateChapters(state);
   if (state.adaptive?.date === date && !state.pendingBookOrder && !correcting)
@@ -121,6 +152,7 @@ export function readingPlan(
   state: ReadingState,
   date = today(state.config.timezone),
 ): Day[] {
+  if (isBible52(state.config)) return createPlan(state.config);
   const prepared = prepareState(state, date);
   const chapters = chaptersFor(prepared.config);
   return prepared.adaptive!.days.map((ids, index) => ({
@@ -132,6 +164,7 @@ export function readingPlan(
 }
 
 export function sessionChapters(state: ReadingState, day: number) {
+  if (isBible52(state.config)) return bible52Units[day]?.chapters ?? [];
   const ids = new Set([
     ...(state.adaptive?.days[day] ?? []),
     ...(state.adaptive?.extra[day] ?? []),
@@ -140,6 +173,7 @@ export function sessionChapters(state: ReadingState, day: number) {
 }
 
 export function nextExtraChapter(state: ReadingState, day: number) {
+  if (isBible52(state.config)) return undefined;
   const present = new Set(sessionChapters(state, day).map((c) => c.id));
   return orderedChapters(state.config).find(
     (c) =>
@@ -152,5 +186,16 @@ export function nextExtraChapter(state: ReadingState, day: number) {
 export function readChaptersOnDay(state: ReadingState, day: number) {
   return orderedChapters(state.config).filter(
     (c) => state.done[c.id] && completionDay(state, c.id) === day,
+  );
+}
+
+// Unfinished sessions take precedence over the next template unit, including after pausing.
+export function bible52CurrentUnit(state: ReadingState) {
+  return (
+    state.timer?.day ??
+    state.pace?.draft?.day ??
+    bible52Units.find((u) => !state.adaptive?.finished.includes(u.index))
+      ?.index ??
+    363
   );
 }

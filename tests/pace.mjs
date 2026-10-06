@@ -248,7 +248,7 @@ assert.equal(rate(legacyFixed), expected(600, [0, 1, 2]));
 // The learning data and pending baseline survive backup/restore with the timer paused.
 const raw = makeBackup(second, "de", "light", now);
 const restored = parseBackup(raw);
-assert.equal(restored.version, 7);
+assert.equal(restored.version, 8);
 assert.equal(rate(restored.state), rate(second));
 assert.deepEqual(restored.state.pace, second.pace);
 const liveBackup = parseBackup(

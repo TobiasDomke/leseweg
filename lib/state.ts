@@ -1,6 +1,8 @@
 import type { Config } from "./planner";
 import type { Lang } from "./i18n";
 import type { BookOrder } from "./book-order";
+// With template bible52, day is the immutable unit index 0–363; dates remain
+// actual reading dates. Ordinary plans continue to use calendar-day indexes.
 export type TimeLog = {
   day: number;
   seconds: number;

@@ -62,6 +62,8 @@ import {
   browserLanguage,
 } from "@/lib/languages";
 import {
+  isBible52,
+  bible52Units,
   createPlan,
   chaptersFor,
   type Chapter,
@@ -77,6 +79,8 @@ import { daySeconds, type ReadingState } from "@/lib/state";
 import { readingPace, estimatedMinutes, sampleNeedsReview } from "@/lib/pace";
 import { applyAction } from "@/lib/actions";
 import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
+import Bible52Weeks from "./bible52-weeks";
+import { bible52Text, bible52Position } from "@/lib/bible52-i18n";
 import PlannerForm from "./planner-form";
 import PlanManagement from "./plan-management";
 import ReadingContext from "./reading-context";
@@ -90,6 +94,7 @@ import BackupControls from "./backup-controls";
 import InstallControls from "./install-controls";
 import PushControls from "./push-controls";
 import {
+  bible52CurrentUnit,
   prepareState,
   readingPlan,
   dayIndex,
@@ -141,9 +146,11 @@ export default function Leseweg({
         now - dateAt(state.config.start).getTime() > 7 * 86400000)) &&
     now - Math.max(backupHistory.exported, backupHistory.snoozed) >
       7 * 86400000;
+  const fixed = !!state && isBible52(state.config),
+    f = bible52Text(lang);
   const p = planText(lang);
   const t = text(lang),
-    names = bookNames(lang),
+    names = bookNames(fixed ? "de" : lang),
     pending = useRef(false),
     stateRef = useRef(state);
   stateRef.current = state;
@@ -307,7 +314,11 @@ export default function Leseweg({
   );
   const pace = useMemo(() => readingPace(state), [state]);
   const estimate = (words: number) => estimatedMinutes(words, pace);
-  const dateIndex = state ? dayIndex(state.config, currentDate) : 0;
+  const dateIndex = planState
+    ? fixed
+      ? bible52CurrentUnit(planState)
+      : dayIndex(planState.config, currentDate)
+    : 0;
   const scoped = scopeChapters(state?.config ?? {});
   const totalWords = scoped.reduce((sum, c) => sum + c.words, 0);
   const priorIds = state?.previouslyRead ?? [];
@@ -381,7 +392,10 @@ export default function Leseweg({
   const seconds = state && day ? daySeconds(state, day.index, now) : 0,
     running = state?.timer?.day === day?.index,
     dayDone = !!planState?.adaptive?.finished.includes(day?.index),
-    canRead = day?.index === dateIndex || running,
+    canRead = fixed
+      ? (state?.timer?.day ?? state?.pace?.draft?.day ?? day?.index) ===
+        day?.index
+      : day?.index === dateIndex || running,
     sessionItems =
       planState && day ? sessionChapters(planState, day.index) : [],
     extraIds = new Set(planState?.adaptive?.extra[day?.index] ?? []),
@@ -464,7 +478,7 @@ export default function Leseweg({
       }))
     ) {
       setFinishing(false);
-      setMessage("replanned");
+      setMessage(fixed ? "saved" : "replanned");
       setSelected(null);
     }
   };
@@ -576,18 +590,25 @@ export default function Leseweg({
         {error && (
           <p className="error notice" role="alert">
             {error === "timer"
-              ? t.busyTimer
+              ? fixed
+                ? f.open
+                : t.busyTimer
               : error === "changed"
                 ? t.planChanged
                 : t.error}
-            {error === "timer" && state?.timer && (
-              <button
-                className="text-button"
-                onClick={() => choose(state.timer!.day)}
-              >
-                {t.goTimer}
-              </button>
-            )}
+            {error === "timer" &&
+              (state?.timer || (fixed && state?.pace?.draft)) && (
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    choose(
+                      state?.timer?.day ?? state?.pace?.draft?.day ?? dateIndex,
+                    )
+                  }
+                >
+                  {t.goTimer}
+                </button>
+              )}
           </p>
         )}
         {message && (
@@ -724,22 +745,28 @@ export default function Leseweg({
                   </h1>
                   <p>
                     {editionName(state?.config ?? {})} ·{" "}
-                    {p[state.config.scope ?? "bible"]}
+                    {fixed
+                      ? "Bibelleseplan 52"
+                      : p[state.config.scope ?? "bible"]}
                   </p>
                 </div>
-                <div className="goal-chip">
+                <div className={`goal-chip ${fixed ? "bible52-goal" : ""}`}>
                   <CalendarDays size={16} />
-                  {t.target} · {fmt(days.at(-1)!.date, true)}
+                  {fixed
+                    ? f.description
+                    : `${t.target} · ${fmt(days.at(-1)!.date, true)}`}
                 </div>
               </div>
-              {days[0].date > currentDate && (
+              {!fixed && days[0].date > currentDate && (
                 <p className="notice">
                   {t.future} {fmt(days[0].date, true)}.
                 </p>
               )}
-              {remainingChapters > 0 && currentDate > days.at(-1)!.date && (
-                <p className="warning">{t.deadlinePassed}</p>
-              )}
+              {!fixed &&
+                remainingChapters > 0 &&
+                currentDate > days.at(-1)!.date && (
+                  <p className="warning">{t.deadlinePassed}</p>
+                )}
               {!!planState?.adaptive?.unplanned?.length && (
                 <p className="warning">
                   {fill(p.unscheduled, {
@@ -750,13 +777,17 @@ export default function Leseweg({
               {!canRead && (
                 <div className="catchup-bar">
                   <span>
-                    {day.date < currentDate ? t.historyHint : t.previewHint}
+                    {fixed
+                      ? f.open
+                      : day.date < currentDate
+                        ? t.historyHint
+                        : t.previewHint}
                   </span>
                   <button
                     className="secondary"
                     onClick={() => choose(dateIndex)}
                   >
-                    {t.backToday}
+                    {fixed ? f.resume : t.backToday}
                   </button>
                 </div>
               )}
@@ -764,23 +795,29 @@ export default function Leseweg({
                 <section className="panel reading-card">
                   <div className="session-heading">
                     <span className="eyebrow">
-                      {dayDone || day.date < currentDate
-                        ? t.read
-                        : t.recommended}
+                      {fixed
+                        ? "Bibelleseplan 52"
+                        : dayDone || day.date < currentDate
+                          ? t.read
+                          : t.recommended}
                     </span>
                     <span className="day-pill">
-                      {t.day} {day.index + 1} / {days.length}
+                      {fixed
+                        ? bible52Position(day.index, lang)
+                        : `${t.day} ${day.index + 1} / ${days.length}`}
                     </span>
                   </div>
                   <h2>
-                    {day.date < currentDate && !day.chapters.length
-                      ? t.noReadingLogged
-                      : readLabel(day.chapters)}
+                    {fixed
+                      ? bible52Units[day.index].label
+                      : day.date < currentDate && !day.chapters.length
+                        ? t.noReadingLogged
+                        : readLabel(day.chapters)}
                   </h2>
                   <div className="session-meta">
                     <span>
                       <CalendarDays size={15} />
-                      {fmt(day.date)}
+                      {fixed ? f.original : fmt(day.date)}
                     </span>
                     {day.words > 0 && (
                       <span>
@@ -800,11 +837,15 @@ export default function Leseweg({
                     lang={lang}
                   />
                   <p className="muted session-intro">
-                    {dayDone
-                      ? t.sessionSaved
-                      : canRead
-                        ? t.adaptiveHint
-                        : t.previewHint}
+                    {fixed
+                      ? dayDone
+                        ? f.saved
+                        : f.finish
+                      : dayDone
+                        ? t.sessionSaved
+                        : canRead
+                          ? t.adaptiveHint
+                          : t.previewHint}
                   </p>
                   {(sessionItems.length > 0 || canRead) && (
                     <>
@@ -857,7 +898,13 @@ export default function Leseweg({
                       {state.timer && !running && (
                         <button
                           className="text-button"
-                          onClick={() => choose(state.timer!.day)}
+                          onClick={() =>
+                            choose(
+                              state?.timer?.day ??
+                                state?.pace?.draft?.day ??
+                                dateIndex,
+                            )
+                          }
                         >
                           <Clock3 size={16} />
                           {t.goTimer}
@@ -874,7 +921,11 @@ export default function Leseweg({
                           >
                             <Checkbox
                               checked={!!doneSet[c.id]}
-                              disabled={busy || !canRead || dayDone}
+                              disabled={
+                                busy ||
+                                !canRead ||
+                                (fixed ? priorIds.includes(c.id) : dayDone)
+                              }
                               onCheckedChange={(v) =>
                                 mutate({
                                   action: "chapter",
@@ -938,16 +989,25 @@ export default function Leseweg({
                           className="secondary add-chapter"
                           disabled={busy}
                           onClick={() =>
-                            mutate({ action: "reopen", day: day.index })
+                            fixed
+                              ? choose(dateIndex)
+                              : mutate({ action: "reopen", day: day.index })
                           }
                         >
                           <BookOpen size={17} />
-                          {t.continueReading}
+                          {fixed ? f.next : t.continueReading}
                         </button>
                       )}
                       <button
                         className="text-button edit-time"
-                        disabled={busy}
+                        disabled={
+                          busy ||
+                          (fixed &&
+                            (!canRead ||
+                              sessionItems.every((c) =>
+                                priorIds.includes(c.id),
+                              )))
+                        }
                         onClick={() => {
                           setCorrectMinutes(
                             String(Math.round(seconds / 6) / 10),
@@ -987,35 +1047,52 @@ export default function Leseweg({
                   </section>
                   <section className="panel next-card">
                     <span className="eyebrow">{t.upcoming}</span>
-                    {days.slice(day.index + 1, day.index + 4).map((d) => (
-                      <button
-                        className="upcoming-row"
-                        key={d.index}
-                        onClick={() => choose(d.index)}
-                      >
-                        <span className="date-square">
-                          <b>{dateAt(d.date).getUTCDate()}</b>
-                          <small>
-                            {dateAt(d.date).toLocaleDateString(locales[lang], {
-                              month: "short",
-                              timeZone: "UTC",
-                            })}
-                          </small>
-                        </span>
-                        <span>
-                          <strong>
-                            {d.date < currentDate && !d.chapters.length
-                              ? t.noReadingLogged
-                              : readLabel(d.chapters)}
-                          </strong>
-                          <small>
-                            {d.words
-                              ? `${t.approx} ${estimate(d.words)} ${t.min}`
-                              : t.rest}
-                          </small>
-                        </span>
-                      </button>
-                    ))}
+                    {days
+                      .filter(
+                        (d) =>
+                          d.index > day.index &&
+                          (!fixed ||
+                            !planState?.adaptive?.finished.includes(d.index)),
+                      )
+                      .slice(0, 3)
+                      .map((d) => (
+                        <button
+                          className="upcoming-row"
+                          key={d.index}
+                          onClick={() => choose(d.index)}
+                        >
+                          <span className="date-square">
+                            <b>
+                              {fixed
+                                ? Math.floor(d.index / 7) + 1
+                                : dateAt(d.date).getUTCDate()}
+                            </b>
+                            <small>
+                              {fixed
+                                ? f.week
+                                : dateAt(d.date).toLocaleDateString(
+                                    locales[lang],
+                                    {
+                                      month: "short",
+                                      timeZone: "UTC",
+                                    },
+                                  )}
+                            </small>
+                          </span>
+                          <span>
+                            <strong>
+                              {d.date < currentDate && !d.chapters.length
+                                ? t.noReadingLogged
+                                : readLabel(d.chapters)}
+                            </strong>
+                            <small>
+                              {d.words
+                                ? `${t.approx} ${estimate(d.words)} ${t.min}`
+                                : t.rest}
+                            </small>
+                          </span>
+                        </button>
+                      ))}
                     <button
                       className="text-button"
                       onClick={() => {
@@ -1040,10 +1117,11 @@ export default function Leseweg({
                 </span>
                 <h1>{t.plan}</h1>
                 <p>
-                  {p[state.config.scope ?? "bible"]} ·{" "}
-                  {p[state.config.order ?? "canonical"]}
+                  {fixed
+                    ? "Bibelleseplan 52"
+                    : `${p[state.config.scope ?? "bible"]} · ${p[state.config.order ?? "canonical"]}`}
                 </p>
-                <p>{t.planSub}</p>
+                <p>{fixed ? f.fixed : t.planSub}</p>
                 <p className="local-note">
                   {fill(p.coverage, {
                     total: scoped.length,
@@ -1053,68 +1131,81 @@ export default function Leseweg({
                   })}
                 </p>
               </div>
-              <div className="panel plan-list">
-                {days.slice(page * 14, page * 14 + 14).map((d) => {
-                  const isDone = !!planState?.adaptive?.finished.includes(
-                    d.index,
-                  );
-                  return (
+              {fixed ? (
+                <section className="panel bible52-plan">
+                  <Bible52Weeks
+                    value={Object.keys(doneSet).map(Number)}
+                    lang={lang}
+                    current={dateIndex}
+                    onChoose={choose}
+                  />
+                </section>
+              ) : (
+                <>
+                  <div className="panel plan-list">
+                    {days.slice(page * 14, page * 14 + 14).map((d) => {
+                      const isDone = !!planState?.adaptive?.finished.includes(
+                        d.index,
+                      );
+                      return (
+                        <button
+                          key={d.index}
+                          className={`plan-row ${d.date === currentDate ? "is-today" : ""}`}
+                          onClick={() => choose(d.index)}
+                        >
+                          <span
+                            className={`plan-indicator ${isDone ? "is-complete" : ""}`}
+                          >
+                            {isDone ? <Check size={18} /> : d.index + 1}
+                          </span>
+                          <span className="plan-passage">
+                            <strong>
+                              {d.date < currentDate && !d.chapters.length
+                                ? t.noReadingLogged
+                                : readLabel(d.chapters)}
+                            </strong>
+                            <small>
+                              {fmt(d.date, true)}
+                              {d.date === currentDate ? ` · ${t.today}` : ""}
+                            </small>
+                          </span>
+                          <span className="plan-duration">
+                            {d.words ? `${estimate(d.words)} ${t.min}` : "–"}
+                            <small>
+                              {isDone
+                                ? t.finished
+                                : d.date < currentDate
+                                  ? t.read
+                                  : t.recommended}
+                            </small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="pagination">
                     <button
-                      key={d.index}
-                      className={`plan-row ${d.date === currentDate ? "is-today" : ""}`}
-                      onClick={() => choose(d.index)}
+                      className="secondary"
+                      aria-label={t.previous}
+                      disabled={page === 0}
+                      onClick={() => setPage(page - 1)}
                     >
-                      <span
-                        className={`plan-indicator ${isDone ? "is-complete" : ""}`}
-                      >
-                        {isDone ? <Check size={18} /> : d.index + 1}
-                      </span>
-                      <span className="plan-passage">
-                        <strong>
-                          {d.date < currentDate && !d.chapters.length
-                            ? t.noReadingLogged
-                            : readLabel(d.chapters)}
-                        </strong>
-                        <small>
-                          {fmt(d.date, true)}
-                          {d.date === currentDate ? ` · ${t.today}` : ""}
-                        </small>
-                      </span>
-                      <span className="plan-duration">
-                        {d.words ? `${estimate(d.words)} ${t.min}` : "–"}
-                        <small>
-                          {isDone
-                            ? t.finished
-                            : d.date < currentDate
-                              ? t.read
-                              : t.recommended}
-                        </small>
-                      </span>
+                      <ChevronLeft size={18} />
                     </button>
-                  );
-                })}
-              </div>
-              <div className="pagination">
-                <button
-                  className="secondary"
-                  aria-label={t.previous}
-                  disabled={page === 0}
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <span>
-                  {t.page} {page + 1} / {Math.ceil(days.length / 14)}
-                </span>
-                <button
-                  className="secondary"
-                  aria-label={t.next}
-                  disabled={(page + 1) * 14 >= days.length}
-                  onClick={() => setPage(page + 1)}
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+                    <span>
+                      {t.page} {page + 1} / {Math.ceil(days.length / 14)}
+                    </span>
+                    <button
+                      className="secondary"
+                      aria-label={t.next}
+                      disabled={(page + 1) * 14 >= days.length}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
               <details className="method">
                 <summary>{t.explain}</summary>
                 <p>{e.approxWeights}</p>
@@ -1231,8 +1322,10 @@ export default function Leseweg({
                   {state.pace?.samples.map((sample, index) => (
                     <div className="pace-sample" key={index}>
                       <p>
-                        {fmt(addDays(state.config.start, sample.day))} ·{" "}
-                        {sample.chapters.length} {t.chapters} ·{" "}
+                        {fixed
+                          ? bible52Position(sample.day, lang)
+                          : fmt(addDays(state.config.start, sample.day))}{" "}
+                        · {sample.chapters.length} {t.chapters} ·{" "}
                         {clockText(sample.seconds)}
                       </p>
                       <label>
@@ -1321,7 +1414,10 @@ export default function Leseweg({
                               )
                             : t.noReadingLogged}
                           <small>
-                            {t.day} {d.day + 1} · {fmt(d.date)}
+                            {fixed
+                              ? bible52Position(d.day, lang)
+                              : `${t.day} ${d.day + 1}`}{" "}
+                            · {fmt(d.date)}
                           </small>
                         </span>
                         <strong>{clockText(d.seconds)}</strong>
@@ -1425,15 +1521,25 @@ export default function Leseweg({
                   </details>
                 </section>
                 <div className="settings-stack">
-                  <EditionControl
-                    state={state}
-                    lang={lang}
-                    busy={busy}
-                    onChange={(edition) =>
-                      mutate({ action: "edition", edition })
-                    }
-                    onReviewed={() => void mutate({ action: "review-edition" })}
-                  />
+                  {fixed ? (
+                    <section className="panel settings-card">
+                      <h2>Bibelleseplan 52</h2>
+                      <p>{f.description}</p>
+                      <p className="muted">{f.fixed}</p>
+                    </section>
+                  ) : (
+                    <EditionControl
+                      state={state}
+                      lang={lang}
+                      busy={busy}
+                      onChange={(edition) =>
+                        mutate({ action: "edition", edition })
+                      }
+                      onReviewed={() =>
+                        void mutate({ action: "review-edition" })
+                      }
+                    />
+                  )}
                   <PlanManagement
                     state={state}
                     lang={lang}
@@ -1468,19 +1574,23 @@ export default function Leseweg({
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="fineprint">{e.editionHelp}</p>
-                    <details className="method">
-                      <summary>{e.advanced}</summary>
-                      <BookOrderControl
-                        config={state.config}
-                        lang={lang}
-                        disabled={busy}
-                        pending={state.pendingBookOrder}
-                        onChange={(choice) =>
-                          void mutate({ action: "book-order", choice, lang })
-                        }
-                      />
-                    </details>
+                    <p className="fineprint">
+                      {fixed ? f.fixed : e.editionHelp}
+                    </p>
+                    {!fixed && (
+                      <details className="method">
+                        <summary>{e.advanced}</summary>
+                        <BookOrderControl
+                          config={state.config}
+                          lang={lang}
+                          disabled={busy}
+                          pending={state.pendingBookOrder}
+                          onChange={(choice) =>
+                            void mutate({ action: "book-order", choice, lang })
+                          }
+                        />
+                      </details>
+                    )}
                     <label>{t.theme}</label>
                     <Select value={theme} onValueChange={setTheme}>
                       <SelectTrigger aria-label={t.theme} className="w-full">
@@ -1550,7 +1660,7 @@ export default function Leseweg({
           <AlertDialogHeader>
             <AlertDialogTitle>{e.finish}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t.finishExplanation}
+              {fixed ? f.finish : t.finishExplanation}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {unusual && (
@@ -1571,7 +1681,7 @@ export default function Leseweg({
               <label className="chapter-row" key={c.id}>
                 <Checkbox
                   checked={!!doneSet[c.id]}
-                  disabled={busy}
+                  disabled={busy || (fixed && priorIds.includes(c.id))}
                   onCheckedChange={(v) =>
                     void mutate({
                       action: "chapter",
@@ -1604,7 +1714,9 @@ export default function Leseweg({
             <p>
               {remainingChapters} {t.chaptersRemaining}
             </p>
-            {remainingChapters === 0 ? (
+            {fixed ? (
+              <p>{f.original}</p>
+            ) : remainingChapters === 0 ? (
               <p>{t.completePlan}</p>
             ) : remainingDays > 0 ? (
               <p>
@@ -1618,7 +1730,7 @@ export default function Leseweg({
             ) : (
               <p className="warning">{t.noDaysRemaining}</p>
             )}
-            {days.length > 0 && (
+            {!fixed && days.length > 0 && (
               <p>
                 {t.target}: {fmt(days.at(-1)!.date, true)}
               </p>
@@ -1633,7 +1745,7 @@ export default function Leseweg({
                 await finishSession();
               }}
             >
-              {busy ? t.saving : t.finishAndReplan}
+              {busy ? t.saving : fixed ? f.save : t.finishAndReplan}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1641,7 +1753,9 @@ export default function Leseweg({
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent>
           <DialogTitle>{t.editTime}</DialogTitle>
-          <DialogDescription>{t.minutesLabel}</DialogDescription>
+          <DialogDescription>
+            {fixed ? f.minutes : t.minutesLabel}
+          </DialogDescription>
           <form
             className="mt-0"
             onSubmit={async (e) => {
@@ -1657,7 +1771,9 @@ export default function Leseweg({
                 setEditing(false);
             }}
           >
-            <label htmlFor="correct-time">{t.minutesLabel}</label>
+            <label htmlFor="correct-time">
+              {fixed ? f.minutes : t.minutesLabel}
+            </label>
             <input
               id="correct-time"
               type="number"

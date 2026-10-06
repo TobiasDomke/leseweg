@@ -190,7 +190,7 @@ oder Kennzeichnung ungelesener Kapitel als gelesen.
 
 Bestehende Pläne werden ohne Datenverlust auf das neue Format vorbereitet.
 Sicherungen der ersten Version lassen sich weiterhin importieren; neue Sicherungen
-verwenden inzwischen Formatversion 3. Kalenderdateien sind Momentaufnahmen und müssen nach
+verwenden inzwischen Formatversion 8. Kalenderdateien sind Momentaufnahmen und müssen nach
 Planänderungen erneut exportiert und importiert werden.
 
 ## Update 1.2: persönliche Zeitschätzungen
@@ -469,3 +469,40 @@ Im Desktop-Browser zusätzlich geprüft: Plan ohne Anmeldung erstellen; Webserve
 abschalten; App neu laden; Kapitel abhaken und Timer stoppen; erneut neu laden
 und gespeicherte Werte kontrollieren. Der Test ersetzt noch keinen abschließenden
 Test in der installierten App auf einem echten iPhone.
+
+
+## Update 1.10: Bibelleseplan 52
+
+Zusätzlich zu den flexiblen Plänen steht **Bibelleseplan 52** nach der vom Betreiber
+bereitgestellten Vorlage von Peter Treu zur Auswahl. Die 52 Wochen mit jeweils
+sieben Abschnitten sind unveränderlich. `lib/bible52.json` enthält die vollständige
+Transkription; ganze Bücher werden anhand des geprüften Schlachter-Inventars
+aufgelöst. Deutsche Buchnamen werden lesbar ausgeschrieben; Reihenfolge,
+Kapitelgrenzen und Ganzbuch-Einträge bleiben erhalten. Alle 66 Bücher und 1.189
+Kapitel der Schlachter 2000 kommen genau einmal vor, einschließlich Joel 1–4 und
+Maleachi 1–3. Dieser Plan bleibt in allen vier Menüsprachen bei Schlachter 2000
+und den deutschen Bibelstellen der Vorlage.
+
+Bei der Einrichtung können ganze Wochen oder einzelne Bibelstellen als bereits
+gelesen markiert werden. Die Unterpunkte zeigen Bibelstellen statt Wochentagen.
+**Einstellungen → Früheren Fortschritt bearbeiten** öffnet dieselbe Auswahl;
+in der App gemessene Kapitel bleiben dort geschützt. Vorheriges Lesen zählt
+zum Fortschritt und erhält eine getrennt ausgewiesene Zeitschätzung.
+
+Die Startseite öffnet den nächsten nicht abgeschlossenen Abschnitt. Unter
+**Leseplan** kann jeder Abschnitt einer aufgeklappten Woche geöffnet werden,
+unabhängig vom Kalenderdatum. Eine laufende oder pausierte Messung muss zuerst
+abgeschlossen werden. Nach einem Teilabschluss bleiben die übrigen Kapitel im
+selben Abschnitt; auch nach dem Zieltermin wird nichts umverteilt oder gelöscht.
+Timer, persönliche Zeitschätzung, CSV/Kalender und Sicherungen unterstützen diese
+festen Abschnitte. Die Messhistorie verwendet die tatsächlichen Lesedaten.
+
+Sicherungsformat 8 und IndexedDB-Version 4 verhindern, dass alte App-Versionen
+diesen festen Plan versehentlich als flexiblen Plan überschreiben. Bestehende
+flexible Pläne und ältere Sicherungen bleiben verwendbar.
+
+`tests/bible52.mjs` vergleicht alle 364 Einträge mit einer unabhängigen
+spaltenweisen Erfassung der Vorlage, prüft jedes Buch gegen das Schlachter-Inventar
+und liest alle Abschnitte in umgekehrter Reihenfolge mit Timer durch. Weitere
+Prüfungen umfassen Sprachwechsel, Teilfortschritt, unveränderte Wochen nach
+verstrichenem Zieltermin, Sicherungsvalidierung und Schutz vor alten Clients.

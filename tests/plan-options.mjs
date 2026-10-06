@@ -156,7 +156,7 @@ for (const scope of ["bible", "ot", "nt"]) {
     assert.equal(extended.config.scope, scope);
     assert.equal(extended.config.order, order);
     const restored = parseBackup(makeBackup(extended, "uk", "dark", now));
-    assert.equal(restored.version, 7);
+    assert.equal(restored.version, 8);
     assert.equal(restored.state.lang, "uk");
     assert.deepEqual(restored.state.previouslyRead, corrected.previouslyRead);
     assert.deepEqual(restored.state.adaptive, extended.adaptive);

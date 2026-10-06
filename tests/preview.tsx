@@ -2,6 +2,9 @@
 import { createRoot } from "react-dom/client";
 import { useState, useEffect, useRef } from "react";
 import Leseweg from "../app/leseweg";
+import PlannerForm from "../app/planner-form";
+import type { Lang } from "../lib/i18n";
+import { languageCodes, languageLabels } from "../lib/languages";
 import "../app/globals.css";
 function Preview() {
   const [width, setWidth] = useState("393"),
@@ -61,7 +64,7 @@ function Preview() {
       <label>
         Test screen{" "}
         <select value={screen} onChange={(e) => setScreen(e.target.value)}>
-          {["today", "plan", "stats", "settings"].map((n) => (
+          {["today", "plan", "stats", "settings", "setup"].map((n) => (
             <option key={n}>{n}</option>
           ))}
         </select>
@@ -83,13 +86,50 @@ function Preview() {
     </div>
   );
 }
+function SetupPreview() {
+  const [lang, setLang] = useState<Lang>("de"),
+    [saved, setSaved] = useState("");
+  return (
+    <div className="app-shell">
+      <main className="workspace">
+        <label>
+          Test language
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as Lang)}
+          >
+            {languageCodes.map((l) => (
+              <option key={l} value={l}>
+                {languageLabels[l]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <PlannerForm
+          key={lang}
+          lang={lang}
+          onSave={(config, previouslyRead) =>
+            setSaved(JSON.stringify({ config, previouslyRead }, null, 2))
+          }
+        />
+        <pre aria-label="Submitted plan">{saved}</pre>
+      </main>
+    </div>
+  );
+}
 if (import.meta.env.DEV)
   createRoot(document.getElementById("root")!).render(
     new URLSearchParams(location.search).get("frame") === "1" ? (
-      <Leseweg
-        previewInstalled
-        previewTab={new URLSearchParams(location.search).get("tab") ?? "today"}
-      />
+      new URLSearchParams(location.search).get("tab") === "setup" ? (
+        <SetupPreview />
+      ) : (
+        <Leseweg
+          previewInstalled
+          previewTab={
+            new URLSearchParams(location.search).get("tab") ?? "today"
+          }
+        />
+      )
     ) : (
       <Preview />
     ),

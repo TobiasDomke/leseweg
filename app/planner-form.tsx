@@ -4,6 +4,8 @@ import { experienceText } from "@/lib/experience-i18n";
 import { useMemo, useRef, useState } from "react";
 import { BookOpen, CalendarDays, Sparkles, CircleCheck } from "lucide-react";
 import {
+  isBible52,
+  bible52Config,
   createPlan,
   scopeChapters,
   today,
@@ -15,6 +17,8 @@ import {
 import { readingPace, estimatedMinutes } from "@/lib/pace";
 import { text, bookNames, locales, type Lang } from "@/lib/i18n";
 import { planText, fill } from "@/lib/plan-i18n";
+import Bible52Weeks from "./bible52-weeks";
+import { bible52Text, bible52Position } from "@/lib/bible52-i18n";
 import PreviousPicker from "./previous-picker";
 import BookOrderControl from "./book-order-control";
 import { languageBookOrder } from "@/lib/book-order";
@@ -30,7 +34,7 @@ export default function PlannerForm({
 }) {
   const t = text(lang),
     p = planText(lang),
-    names = bookNames(lang);
+    f = bible52Text(lang);
   const [step, setStep] = useState(0),
     [previouslyRead, setPrevious] = useState<number[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -47,15 +51,20 @@ export default function PlannerForm({
     bookOrderMode: "auto",
   });
   const config = useMemo(
-    () => ({
-      ...draftConfig,
-      bookOrder:
-        draftConfig.bookOrderMode === "auto"
-          ? languageBookOrder(lang)
-          : draftConfig.bookOrder,
-    }),
+    () =>
+      isBible52(draftConfig)
+        ? bible52Config(draftConfig)
+        : {
+            ...draftConfig,
+            bookOrder:
+              draftConfig.bookOrderMode === "auto"
+                ? languageBookOrder(lang)
+                : draftConfig.bookOrder,
+          },
     [draftConfig, lang],
   );
+  const fixed = isBible52(config),
+    names = bookNames(fixed ? "de" : lang);
   const items = scopeChapters(config);
   const computed = useMemo(() => {
     try {
@@ -113,168 +122,263 @@ export default function PlannerForm({
           onSubmit={(e) => {
             e.preventDefault();
             if (step < 2) move(step + 1);
-            else if (!computed.error) onSave(config, previouslyRead);
+            else {
+              // Native date controls can commit on blur; submit their visible value.
+              const start = new FormData(e.currentTarget).get("start");
+              const submitted = {
+                ...config,
+                start: typeof start === "string" ? start : config.start,
+              };
+              try {
+                createPlan(submitted, previouslyRead);
+                onSave(submitted, previouslyRead);
+              } catch {
+                setConfig(submitted);
+              }
+            }
           }}
         >
           <fieldset disabled={busy}>
             {step === 0 && (
               <>
                 <fieldset className="choice-field">
-                  <legend>{p.scope}</legend>
-                  {(["bible", "ot", "nt"] as const).map((value) => (
-                    <label className="plan-choice" key={value}>
+                  <legend>{f.type}</legend>
+                  {[false, true].map((value) => (
+                    <label className="plan-choice" key={String(value)}>
                       <input
                         type="radio"
-                        name="scope"
-                        value={value}
-                        checked={config.scope === value}
-                        onChange={() => scope(value)}
+                        name="template"
+                        checked={fixed === value}
+                        onChange={() => {
+                          setPrevious([]);
+                          setConfig(
+                            value
+                              ? bible52Config(config)
+                              : {
+                                  ...config,
+                                  template: undefined,
+                                  edition: languageEdition(lang),
+                                  amount: 12,
+                                  unit: "months",
+                                  scope: "bible",
+                                  order: "canonical",
+                                  keepTogether: true,
+                                  bookOrderMode: "auto",
+                                },
+                          );
+                        }}
                       />
                       <span>
-                        <strong>{p[value]}</strong>
-                        <small>
-                          {fill(p.booksChapters, {
-                            books:
-                              value === "bible" ? 66 : value === "ot" ? 39 : 27,
-                            chapters:
-                              value === "bible"
-                                ? 1189
-                                : value === "ot"
-                                  ? 929
-                                  : 260,
-                          })}
-                        </small>
+                        <strong>
+                          {value ? "Bibelleseplan 52" : f.flexible}
+                        </strong>
+                        <small>{value ? f.description : f.flexibleHelp}</small>
                       </span>
                     </label>
                   ))}
                 </fieldset>
-                <p className="notice">
-                  <strong>
-                    {experienceText(lang).edition}: {editionName(config)}
-                  </strong>
-                </p>
-                <details className="method">
-                  <summary>{experienceText(lang).advanced}</summary>
-                  <BookOrderControl
-                    config={config}
-                    lang={lang}
-                    disabled={busy}
-                    onChange={(choice) =>
-                      setConfig({
-                        ...config,
-                        bookOrderMode: choice === "auto" ? "auto" : "manual",
-                        bookOrder:
-                          choice === "auto" ? languageBookOrder(lang) : choice,
-                      })
-                    }
-                  />
-                </details>
-                <fieldset className="choice-field">
-                  <legend>{p.order}</legend>
-                  {(["canonical", "chronological", "mixed"] as const).map(
-                    (value) => (
-                      <label className="plan-choice" key={value}>
-                        <input
-                          type="radio"
-                          name="order"
-                          value={value}
-                          checked={config.order === value}
-                          onChange={() =>
-                            setConfig({ ...config, order: value })
-                          }
-                        />
-                        <span>
-                          <strong>{p[value]}</strong>
-                          <small>{p[`${value}Help`]}</small>
-                        </span>
-                      </label>
-                    ),
-                  )}
-                </fieldset>
-                <label className="together-choice">
-                  <input
-                    type="checkbox"
-                    checked={!!config.keepTogether}
-                    onChange={(e) =>
-                      setConfig({ ...config, keepTogether: e.target.checked })
-                    }
-                  />
-                  <span>
-                    {p.together}
-                    <small>{p.togetherHelp}</small>
-                  </span>
-                </label>
+                {fixed ? (
+                  <p className="notice bible52-note">{f.fixed}</p>
+                ) : (
+                  <>
+                    <fieldset className="choice-field">
+                      <legend>{p.scope}</legend>
+                      {(["bible", "ot", "nt"] as const).map((value) => (
+                        <label className="plan-choice" key={value}>
+                          <input
+                            type="radio"
+                            name="scope"
+                            value={value}
+                            checked={config.scope === value}
+                            onChange={() => scope(value)}
+                          />
+                          <span>
+                            <strong>{p[value]}</strong>
+                            <small>
+                              {fill(p.booksChapters, {
+                                books:
+                                  value === "bible"
+                                    ? 66
+                                    : value === "ot"
+                                      ? 39
+                                      : 27,
+                                chapters:
+                                  value === "bible"
+                                    ? 1189
+                                    : value === "ot"
+                                      ? 929
+                                      : 260,
+                              })}
+                            </small>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    <p className="notice">
+                      <strong>
+                        {experienceText(lang).edition}: {editionName(config)}
+                      </strong>
+                    </p>
+                    <details className="method">
+                      <summary>{experienceText(lang).advanced}</summary>
+                      <BookOrderControl
+                        config={config}
+                        lang={lang}
+                        disabled={busy}
+                        onChange={(choice) =>
+                          setConfig({
+                            ...config,
+                            bookOrderMode:
+                              choice === "auto" ? "auto" : "manual",
+                            bookOrder:
+                              choice === "auto"
+                                ? languageBookOrder(lang)
+                                : choice,
+                          })
+                        }
+                      />
+                    </details>
+                    <fieldset className="choice-field">
+                      <legend>{p.order}</legend>
+                      {(["canonical", "chronological", "mixed"] as const).map(
+                        (value) => (
+                          <label className="plan-choice" key={value}>
+                            <input
+                              type="radio"
+                              name="order"
+                              value={value}
+                              checked={config.order === value}
+                              onChange={() =>
+                                setConfig({ ...config, order: value })
+                              }
+                            />
+                            <span>
+                              <strong>{p[value]}</strong>
+                              <small>{p[`${value}Help`]}</small>
+                            </span>
+                          </label>
+                        ),
+                      )}
+                    </fieldset>
+                    <label className="together-choice">
+                      <input
+                        type="checkbox"
+                        checked={!!config.keepTogether}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            keepTogether: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        {p.together}
+                        <small>{p.togetherHelp}</small>
+                      </span>
+                    </label>
+                  </>
+                )}
               </>
             )}
             {step === 1 && (
               <>
                 <h3>{p.previous}</h3>
-                <p className="muted">{p.previousHelp}</p>
-                <PreviousPicker
-                  config={config}
-                  value={previouslyRead}
-                  onChange={setPrevious}
-                  lang={lang}
-                  disabled={busy}
-                />
+                <p className="muted">
+                  {fixed ? f.progressHelp : p.previousHelp}
+                </p>
+                {fixed ? (
+                  <Bible52Weeks
+                    value={previouslyRead}
+                    onChange={setPrevious}
+                    lang={lang}
+                    disabled={busy}
+                  />
+                ) : (
+                  <PreviousPicker
+                    config={config}
+                    value={previouslyRead}
+                    onChange={setPrevious}
+                    lang={lang}
+                    disabled={busy}
+                  />
+                )}
               </>
             )}
             {step === 2 && (
               <>
-                <label htmlFor="amount">{p.period}</label>
-                <div className="duration-row">
-                  <input
-                    id="amount"
-                    type="number"
-                    min="1"
-                    max="3650"
-                    required
-                    value={config.amount || ""}
-                    onChange={(e) =>
-                      setConfig({ ...config, amount: Number(e.target.value) })
-                    }
-                  />
-                  <select
-                    aria-label={p.period}
-                    value={config.unit}
-                    onChange={(e) =>
-                      setConfig({ ...config, unit: e.target.value as Unit })
-                    }
-                  >
-                    <option value="days">{t.days}</option>
-                    <option value="weeks">{t.weeks}</option>
-                    <option value="months">{t.months}</option>
-                  </select>
-                </div>
-                <label htmlFor="start">{t.startDate}</label>
+                {!fixed && (
+                  <>
+                    <label htmlFor="amount">{p.period}</label>
+                    <div className="duration-row">
+                      <input
+                        id="amount"
+                        type="number"
+                        min="1"
+                        max="3650"
+                        required
+                        value={config.amount || ""}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            amount: Number(e.target.value),
+                          })
+                        }
+                      />
+                      <select
+                        aria-label={p.period}
+                        value={config.unit}
+                        onChange={(e) =>
+                          setConfig({ ...config, unit: e.target.value as Unit })
+                        }
+                      >
+                        <option value="days">{t.days}</option>
+                        <option value="weeks">{t.weeks}</option>
+                        <option value="months">{t.months}</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <label htmlFor="start">{fixed ? f.start : t.startDate}</label>
                 <input
                   id="start"
+                  name="start"
                   type="date"
                   min="2020-01-01"
                   max="2100-12-31"
                   required
                   value={config.start}
+                  onInput={(e) =>
+                    setConfig({ ...config, start: e.currentTarget.value })
+                  }
                   onChange={(e) =>
                     setConfig({ ...config, start: e.target.value })
                   }
                 />
-                <div className="form-info">
-                  <Sparkles size={18} />
-                  <p>
-                    <strong>{t.balanced}</strong>
-                    <br />
-                    {t.balancedSub}
-                  </p>
-                </div>
+                {fixed ? (
+                  <p className="notice">{f.startHelp}</p>
+                ) : (
+                  <div className="form-info">
+                    <Sparkles size={18} />
+                    <p>
+                      <strong>{t.balanced}</strong>
+                      <br />
+                      {t.balancedSub}
+                    </p>
+                  </div>
+                )}
                 {computed.error && (
                   <p role="alert" className="error">
                     {computed.error}
                   </p>
                 )}
                 {computed.days.length > 0 &&
-                  estimate(remainingWords / computed.days.length) > 90 && (
-                    <p className="warning">{t.longDay}</p>
-                  )}
+                  estimate(
+                    remainingWords /
+                      (fixed
+                        ? computed.days.filter((d) => d.chapters.length)
+                            .length || 1
+                        : computed.days.length),
+                  ) > 90 && <p className="warning">{t.longDay}</p>}
                 {items.length === previouslyRead.length && (
                   <p className="notice">{p.allDone}</p>
                 )}
@@ -305,7 +409,13 @@ export default function PlannerForm({
         <div className="time-estimate">
           <strong>
             {computed.days.length
-              ? estimate(remainingWords / computed.days.length)
+              ? estimate(
+                  remainingWords /
+                    (fixed
+                      ? computed.days.filter((d) => d.chapters.length).length ||
+                        1
+                      : computed.days.length),
+                )
               : "–"}
           </strong>
           <span>
@@ -318,7 +428,9 @@ export default function PlannerForm({
           <div>
             <BookOpen size={18} />
             <span>
-              {p[config.scope ?? "bible"]} · {p[config.order ?? "canonical"]}
+              {fixed
+                ? "Bibelleseplan 52"
+                : `${p[config.scope ?? "bible"]} · ${p[config.order ?? "canonical"]}`}
             </span>
           </div>
           <div>
@@ -344,25 +456,32 @@ export default function PlannerForm({
         </div>
         <div className="preview-days">
           <h3>{t.beginning}</h3>
-          {computed.days.slice(0, 3).map((d) => (
-            <div className="preview-day" key={d.index}>
-              <span>{String(d.index + 1).padStart(2, "0")}</span>
-              <div>
-                <strong>{passage(d.chapters, names) || t.rest}</strong>
-                <small>
-                  {fmt(d.date)} ·{" "}
-                  {d.words
-                    ? `${t.approx} ${estimate(d.words)} ${t.min}`
-                    : t.rest}
-                </small>
+          {computed.days
+            .filter((d) => !fixed || d.chapters.length)
+            .slice(0, 3)
+            .map((d) => (
+              <div className="preview-day" key={d.index}>
+                <span>
+                  {fixed
+                    ? (d.index % 7) + 1
+                    : String(d.index + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <strong>{passage(d.chapters, names) || t.rest}</strong>
+                  <small>
+                    {fixed ? bible52Position(d.index, lang) : fmt(d.date)} ·{" "}
+                    {d.words
+                      ? `${t.approx} ${estimate(d.words)} ${t.min}`
+                      : t.rest}
+                  </small>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
         <details className="method">
           <summary>{experienceText(lang).advanced}</summary>
           <p className="fineprint">{experienceText(lang).approxWeights}</p>
-          <p>{experienceText(lang).editionHelp}</p>
+          <p>{fixed ? f.fixed : experienceText(lang).editionHelp}</p>
         </details>
       </aside>
     </div>

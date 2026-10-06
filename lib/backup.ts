@@ -3,6 +3,9 @@ import { languageCodes } from "./languages";
 import { bookOrders } from "./book-order";
 import { configSchema, previousSchema } from "./actions";
 import {
+  isBible52,
+  bible52Units,
+  bible52ChapterUnit,
   duration,
   dateAt,
   isoDate,
@@ -163,6 +166,7 @@ const schema = z
       z.literal(5),
       z.literal(6),
       z.literal(7),
+      z.literal(8),
     ]),
     exportedAt: timestamp,
     theme: z.enum(["light", "dark"]),
@@ -215,6 +219,41 @@ export function parseBackup(raw: string): Backup {
       throw Error("backup");
   }
   const adaptive = backup.state.adaptive;
+  if (isBible52(backup.state.config)) {
+    const s = backup.state;
+    if (
+      backup.version < 8 ||
+      s.chapterSchema !== 2 ||
+      !s.sessions ||
+      !s.pace ||
+      !s.completionDays ||
+      s.pendingBookOrder ||
+      !adaptive ||
+      adaptive.unplanned?.length ||
+      Object.keys(adaptive.extra).length ||
+      bible52Units.some((u) => {
+        const expected = u.chapters
+          .filter((c) => !previous.has(c.id))
+          .map((c) => c.id);
+        return (
+          JSON.stringify(adaptive.days[u.index]) !== JSON.stringify(expected)
+        );
+      }) ||
+      Object.keys(s.done).some(
+        (id) => s.completionDays?.[id] !== bible52ChapterUnit[Number(id)],
+      ) ||
+      adaptive.finished.some(
+        (day) =>
+          !bible52Units[day]?.chapters.every(
+            (c) => previous.has(c.id) || s.done[c.id],
+          ),
+      ) ||
+      [...(s.sessions ?? []), ...(s.pace?.samples ?? [])].some((sample) =>
+        sample.chapters.some((id) => bible52ChapterUnit[id] !== sample.day),
+      )
+    )
+      throw Error("backup");
+  }
   if (adaptive) {
     const ids = adaptive.days.flat();
     const pending = adaptive.unplanned ?? [];
@@ -322,7 +361,7 @@ export function makeBackup(
   return JSON.stringify(
     {
       app: "leseweg",
-      version: 7,
+      version: 8,
       exportedAt: new Date(now).toISOString(),
       theme: theme === "dark" ? "dark" : "light",
       state: snapshot,

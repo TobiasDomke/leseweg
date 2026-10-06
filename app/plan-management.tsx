@@ -9,6 +9,9 @@ import { addDays, duration, today } from "@/lib/planner";
 import type { ReadingState } from "@/lib/state";
 import { text, type Lang } from "@/lib/i18n";
 import { planText, fill } from "@/lib/plan-i18n";
+import Bible52Weeks from "./bible52-weeks";
+import { isBible52 } from "@/lib/planner";
+import { bible52Text } from "@/lib/bible52-i18n";
 import PreviousPicker from "./previous-picker";
 export default function PlanManagement({
   state,
@@ -21,6 +24,8 @@ export default function PlanManagement({
   busy: boolean;
   mutate: (op: Record<string, unknown>) => Promise<ReadingState | null>;
 }) {
+  const fixed = isBible52(state.config),
+    f = bible52Text(lang);
   const p = planText(lang),
     t = text(lang);
   const [mode, setMode] = useState<"previous" | "deadline" | null>(null),
@@ -32,14 +37,15 @@ export default function PlanManagement({
     <section className="panel settings-card">
       <h2>{p.manage}</h2>
       <p className="muted">
-        {p[state.config.scope ?? "bible"]} ·{" "}
-        {p[state.config.order ?? "canonical"]}
+        {fixed
+          ? "Bibelleseplan 52"
+          : `${p[state.config.scope ?? "bible"]} · ${p[state.config.order ?? "canonical"]}`}
       </p>
       <p>{fill(p.selected, { count: state.previouslyRead?.length ?? 0 })}</p>
       <div className="management-actions">
         <button
           className="secondary"
-          disabled={busy || !!state.timer}
+          disabled={busy || !!state.timer || (fixed && !!state.pace?.draft)}
           onClick={() => {
             setPrevious(state.previouslyRead ?? []);
             setMode("previous");
@@ -47,18 +53,22 @@ export default function PlanManagement({
         >
           {p.editPrevious}
         </button>
-        <button
-          className="secondary"
-          disabled={busy || !!state.timer}
-          onClick={() => {
-            setEnd(addDays(minimumEnd, 30));
-            setMode("deadline");
-          }}
-        >
-          {p.extend}
-        </button>
+        {!fixed && (
+          <button
+            className="secondary"
+            disabled={busy || !!state.timer}
+            onClick={() => {
+              setEnd(addDays(minimumEnd, 30));
+              setMode("deadline");
+            }}
+          >
+            {p.extend}
+          </button>
+        )}
       </div>
-      {state.timer && <p className="fineprint">{p.stopFirst}</p>}
+      {(state.timer || (fixed && state.pace?.draft)) && (
+        <p className="fineprint">{p.stopFirst}</p>
+      )}
       <Dialog
         open={mode !== null}
         onOpenChange={(open) => {
@@ -70,18 +80,32 @@ export default function PlanManagement({
             {mode === "previous" ? p.editPrevious : p.extend}
           </DialogTitle>
           <DialogDescription>
-            {mode === "previous" ? p.previousEditHelp : p.extendHelp}
+            {mode === "previous"
+              ? fixed
+                ? f.progressHelp
+                : p.previousEditHelp
+              : p.extendHelp}
           </DialogDescription>
           {mode === "previous" ? (
             <>
-              <PreviousPicker
-                config={state.config}
-                value={previous}
-                onChange={setPrevious}
-                lang={lang}
-                locked={Object.keys(state.done).map(Number)}
-                disabled={busy}
-              />
+              {fixed ? (
+                <Bible52Weeks
+                  value={previous}
+                  onChange={setPrevious}
+                  lang={lang}
+                  locked={Object.keys(state.done).map(Number)}
+                  disabled={busy}
+                />
+              ) : (
+                <PreviousPicker
+                  config={state.config}
+                  value={previous}
+                  onChange={setPrevious}
+                  lang={lang}
+                  locked={Object.keys(state.done).map(Number)}
+                  disabled={busy}
+                />
+              )}
               <div className="wizard-actions">
                 <button
                   className="secondary"

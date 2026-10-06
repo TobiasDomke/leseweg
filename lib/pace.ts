@@ -1,4 +1,10 @@
-import { chaptersFor, createPlan, today } from "./planner";
+import {
+  isBible52,
+  bible52ChapterUnit,
+  chaptersFor,
+  createPlan,
+  today,
+} from "./planner";
 import { dayIndex, readChaptersOnDay } from "./adaptive";
 import type { PaceSample, PaceState, ReadingState } from "./state";
 
@@ -81,6 +87,7 @@ export function finishPace(
   const ids = doneIds(state).filter(
     (id) =>
       !before.has(id) &&
+      (!isBible52(state.config) || bible52ChapterUnit[id] === day) &&
       !used.has(id) &&
       (day === finishedDay ||
         (lastMeasuredDate && state.done[id] <= lastMeasuredDate)),
@@ -113,7 +120,8 @@ export function correctPace(state: ReadingState, day: number) {
   const draft = { day, before, secondsBefore: 0, manual: true };
   const closed =
     state.adaptive?.finished.includes(day) ||
-    (pace.draft?.day !== day &&
+    (!isBible52(state.config) &&
+      pace.draft?.day !== day &&
       day < dayIndex(state.config, state.adaptive?.date ?? state.config.start));
   if (closed) {
     const pending = pace.draft;

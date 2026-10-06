@@ -1805,3 +1805,126 @@ a:focus-visible {
 .pace-sample input {
   flex-shrink: 0;
 }
+
+/* Fixed school plan: one collapsible week, seven passage labels, no wide table. */
+.bible52-week-list {
+  max-height: min(64dvh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.bible52-weeks {
+  min-width: 0;
+}
+.bible52-week + .bible52-week {
+  border-top: 1px solid var(--border);
+}
+.bible52-week-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+.bible52-expand {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 10px;
+  text-align: left;
+  padding: 15px 0;
+}
+.bible52-expand span {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.bible52-expand svg {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.bible52-expand[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+.bible52-passages {
+  padding: 0 10px 10px;
+}
+.bible52-passage {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px;
+  margin: 0;
+  border-radius: 10px;
+  text-align: left;
+}
+.bible52-passage > span:not(.bible52-unit-number) {
+  min-width: 0;
+  flex: 1;
+}
+.bible52-passage strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.bible52-passage small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 3px;
+}
+.bible52-passage:hover,
+.bible52-passage[aria-current="step"] {
+  background: var(--muted);
+}
+.bible52-passage.is-done strong {
+  color: var(--primary);
+}
+.bible52-unit-number {
+  flex: 0 0 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.bible52-passage svg {
+  flex-shrink: 0;
+}
+.bible52-note {
+  margin: 14px 0;
+}
+@media (max-width: 400px) {
+  .bible52-week-heading {
+    padding: 0 10px;
+    gap: 10px;
+  }
+  .bible52-expand {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .bible52-expand strong {
+    font-size: 0.95rem;
+  }
+}
+
+.plan-management-dialog .bible52-week-list {
+  max-height: 42dvh;
+}
+
+.bible52-plan {
+  padding: 20px;
+}
+@media (max-width: 400px) {
+  .bible52-plan {
+    padding: 12px;
+  }
+}
+
+.goal-chip.bible52-goal {
+  white-space: normal;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.5;
+}

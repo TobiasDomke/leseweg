@@ -1,3 +1,4 @@
+import bible52Source from "./bible52.json";
 import { sourceParts, type Edition } from "./editions";
 import editionCanon from "./edition-canon.json";
 import books from "./bible-lengths.json";
@@ -6,6 +7,7 @@ import { chronologicalBlocks, cohesiveReferences } from "./reading-order";
 import { sortByBookOrder, type BookOrder } from "./book-order";
 export type Unit = "days" | "weeks" | "months";
 export type Config = {
+  template?: "bible52";
   edition?: Edition;
   amount: number;
   unit: Unit;
@@ -131,7 +133,35 @@ export function today(zone = "Europe/Berlin", now = Date.now()) {
     day: "2-digit",
   }).format(new Date(now));
 }
+export const isBible52 = (config: Pick<Config, "template">) =>
+  config.template === "bible52";
+export function bible52Config(config: Config): Config {
+  return {
+    ...config,
+    template: "bible52",
+    edition: "schlachter2000",
+    amount: 52,
+    unit: "weeks",
+    scope: "bible",
+    order: "canonical",
+    keepTogether: false,
+    bookOrder: "western",
+    bookOrderMode: "manual",
+  };
+}
 export function duration(config: Config) {
+  if (
+    isBible52(config) &&
+    (config.edition !== "schlachter2000" ||
+      config.amount !== 52 ||
+      config.unit !== "weeks" ||
+      config.scope !== "bible" ||
+      config.order !== "canonical" ||
+      config.bookOrder !== "western" ||
+      config.bookOrderMode !== "manual" ||
+      config.keepTogether)
+  )
+    throw Error("template");
   if (
     !Number.isInteger(config.amount) ||
     config.amount < 1 ||
@@ -242,6 +272,36 @@ assertCoverage(
   chronological.map((c) => c.id),
 );
 
+// The photographed 52-week template is an immutable partition of Schlachter 2000.
+// Whole-book entries are expanded using our independently verified inventory.
+export const bible52Weeks = bible52Source.weeks.map((refs, week) =>
+  refs.map((ref, slot) => {
+    const cs = ref.includes(" ")
+      ? referenceChapters(ref)
+      : chapters.filter((c) => c.code === ref);
+    if (!cs.length) throw Error("template");
+    return {
+      index: week * 7 + slot,
+      week: week + 1,
+      slot: slot + 1,
+      ref,
+      category: bible52Source.categories[slot],
+      chapters: cs,
+      label: ref.includes(" ") ? passage(cs) : cs[0].book,
+    };
+  }),
+);
+export const bible52Units = bible52Weeks.flat();
+if (bible52Weeks.length !== 52 || bible52Weeks.some((w) => w.length !== 7))
+  throw Error("template");
+assertCoverage(
+  chapters,
+  bible52Units.flatMap((u) => u.chapters.map((c) => c.id)),
+);
+export const bible52ChapterUnit = Object.fromEntries(
+  bible52Units.flatMap((u) => u.chapters.map((c) => [c.id, u.index])),
+);
+
 // Weighted interleaving keeps every stream's internal order and finishes them
 // together. It is deterministic, so extra reading follows the same order.
 function mixedChapters(items: Chapter[]) {
@@ -273,6 +333,7 @@ function mixedChapters(items: Chapter[]) {
 }
 const orderCache = new Map<string, Chapter[]>();
 export function orderedChapters(config: Config) {
+  if (isBible52(config)) return bible52Units.flatMap((u) => u.chapters);
   const key = `${config.edition ?? "schlachter2000"}:${config.scope ?? "bible"}:${config.order ?? "canonical"}:${config.bookOrder ?? "western"}`;
   const cached = orderCache.get(key);
   if (cached) return cached;
@@ -320,12 +381,23 @@ export function createPlan(
     previouslyRead.some((id) => !allowed.has(id))
   )
     throw Error("prior");
-  const plan = distributeChapters(
-    items.filter((c) => !previous.has(c.id)),
-    duration(config),
-    config.start,
-    boundaryPreference(config),
-  );
+  duration(config);
+  const plan = isBible52(config)
+    ? bible52Units.map((u) => {
+        const cs = u.chapters.filter((c) => !previous.has(c.id));
+        return {
+          index: u.index,
+          date: addDays(config.start, u.index),
+          chapters: cs,
+          words: cs.reduce((n, c) => n + c.words, 0),
+        };
+      })
+    : distributeChapters(
+        items.filter((c) => !previous.has(c.id)),
+        duration(config),
+        config.start,
+        boundaryPreference(config),
+      );
   assertCoverage(items, [
     ...previouslyRead,
     ...plan.flatMap((day) => day.chapters.map((c) => c.id)),
