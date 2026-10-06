@@ -221,6 +221,9 @@ braucht die veröffentlichte App HTTPS.
 Liste der gebauten Dateien und einer aus deren Inhalt berechneten Version.
 Fehlgeschlagene Downloads verhindern die Aktivierung einer unvollständigen
 Offlineversion. Updates werden erst nach Bestätigung übernommen.
+Die Startseite wird unter ihrer endgültigen Adresse `/` gespeichert, da Cloudflare
+`/index.html` dorthin weiterleitet. Auch Änderungen am Service Worker und an seiner
+Dateiliste ändern die Cache-Version.
 
 ## Prüfung
 

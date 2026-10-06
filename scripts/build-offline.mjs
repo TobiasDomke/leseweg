@@ -16,14 +16,20 @@ async function files(dir) {
 const assets = (await files(root))
   .filter((path) => !["sw.js", "_headers"].includes(relative(root, path)))
   .sort();
+// Pages redirects /index.html to /. Cache the final URL so a navigation never
+// receives a cached response whose redirect mode is incompatible with it.
+const urls = assets.map((path) =>
+  relative(root, path) === "index.html" ? "/" : "/" + relative(root, path),
+);
+const template = await readFile("scripts/sw-template.js", "utf8");
 const hash = createHash("sha256");
+hash.update(template);
+hash.update(JSON.stringify(urls));
 for (const path of assets) {
   hash.update(relative(root, path));
   hash.update(await readFile(path));
 }
 const version = hash.digest("hex").slice(0, 16);
-const urls = assets.map((path) => "/" + relative(root, path));
-const template = await readFile("scripts/sw-template.js", "utf8");
 await writeFile(
   resolve(root, "sw.js"),
   template

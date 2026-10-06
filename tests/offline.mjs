@@ -13,10 +13,22 @@ const caches = {
     const data = stores.get(name);
     return {
       addAll: async (urls) => {
-        for (const url of urls) data.set(url, await readFile("dist" + url));
+        for (const url of urls)
+          data.set(
+            url,
+            await readFile(url === "/" ? "dist/index.html" : "dist" + url),
+          );
       },
-      match: async (key) =>
-        data.has(key) ? new Response(data.get(key)) : undefined,
+      match: async (key) => {
+        if (!data.has(key)) return undefined;
+        const response = new Response(data.get(key));
+        // Cloudflare follows /index.html -> / during precaching. Browsers reject
+        // replaying that redirected response for a navigation in manual mode.
+        Object.defineProperty(response, "redirected", {
+          value: key === "/index.html",
+        });
+        return response;
+      },
     };
   },
   keys: async () => [...stores.keys()],
@@ -64,14 +76,27 @@ assert(stores.has("unrelated-cache"));
 async function offline(url, mode) {
   let response;
   handlers.fetch({
-    request: { method: "GET", url: "https://app.example" + url, mode },
+    request: {
+      method: "GET",
+      url: "https://app.example" + url,
+      mode,
+      redirect: mode === "navigate" ? "manual" : "follow",
+    },
     respondWith: (promise) => {
       response = promise;
     },
   });
   assert(response, url + " must be handled offline");
-  return await (await response).text();
+  const result = await response;
+  if (mode === "navigate")
+    assert.equal(
+      result.redirected,
+      false,
+      "Navigation must not replay a cached redirect",
+    );
+  return await result.text();
 }
+assert((await offline("/", "navigate")).includes('id="root"'));
 const html = await offline("/?day=12", "navigate");
 assert(html.includes('id="root"'));
 for (const [, url] of html.matchAll(/(?:src|href)="(\/[^\"]+)"/g))
@@ -107,7 +132,7 @@ assert.equal(
   true,
   "Complete local installation is reported ready with the host unavailable",
 );
-const active = [...stores.values()].find((cache) => cache.has("/index.html"));
+const active = [...stores.values()].find((cache) => cache.has("/"));
 const [asset, contents] = [...active].find(([path]) =>
   path.startsWith("/assets/"),
 );
