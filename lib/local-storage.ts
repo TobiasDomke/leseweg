@@ -10,7 +10,7 @@ async function transaction(
 ): Promise<ReadingState | null> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     // Reject writes from still-open old app versions after chapter IDs migrate.
-    const request = indexedDB.open("leseweg-local", 2);
+    const request = indexedDB.open("leseweg-local", 3);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains("reading"))
         request.result.createObjectStore("reading");
@@ -42,7 +42,20 @@ async function transaction(
         if (update) {
           if (result && result.chapterSchema !== 2)
             store.put(result, "before-chapter-schema-2");
+          if (result && !result.sessions)
+            store.put(result, "before-editions-and-sessions");
+          const original = result;
           result = update(result);
+          if (
+            original &&
+            result &&
+            original.id === result.id &&
+            original.config.edition !== result.config.edition
+          )
+            store.put(
+              original,
+              `before-edition-${original.config.edition ?? "schlachter2000"}`,
+            );
           store.put(result, "active");
         }
       } catch (error) {

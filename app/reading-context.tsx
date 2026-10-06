@@ -1,5 +1,5 @@
 import {
-  historicalGroups,
+  historicalGroupsFor,
   passage,
   type Chapter,
   type Config,
@@ -17,7 +17,7 @@ export default function ReadingContext({
 }) {
   if (config.order !== "chronological") return null;
   const ids = new Set(items.map((c) => c.id));
-  const groups = historicalGroups.filter(
+  const groups = historicalGroupsFor(config).filter(
     (group) => group.kind && group.chapters.some((c) => ids.has(c.id)),
   );
   if (!groups.length) return null;

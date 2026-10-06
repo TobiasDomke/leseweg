@@ -1,7 +1,17 @@
+import { sessionsFor, logDate } from "./session-stats";
+import { changeEdition } from "./edition-migration";
+import { editionIds, editions, languageEdition } from "./editions";
 import { z } from "zod";
 import { languageCodes } from "./languages";
 import { bookOrders, languageBookOrder } from "./book-order";
-import { createPlan, today, scopeChapters, duration, dateAt } from "./planner";
+import {
+  createPlan,
+  today,
+  scopeChapters,
+  duration,
+  dateAt,
+  addDays,
+} from "./planner";
 import {
   prepareState,
   dayIndex,
@@ -19,6 +29,7 @@ import {
 } from "./pace";
 export const configSchema = z
   .object({
+    edition: z.enum(editionIds).optional(),
     scope: z.enum(["bible", "ot", "nt"]).optional(),
     order: z.enum(["canonical", "chronological", "mixed"]).optional(),
     keepTogether: z.boolean().optional(),
@@ -46,6 +57,31 @@ export const previousSchema = z
   .max(1189)
   .refine((ids) => new Set(ids).size === ids.length);
 const requestSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("review-pace"),
+      index: z.number().int().min(0).max(1188),
+      seconds: z.number().int().positive(),
+      review: z.enum(["auto", "confirmed", "excluded"]),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("edition"),
+      edition: z.enum(editionIds),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("review-edition"),
+      planId: z.string(),
+      opId: z.string().uuid(),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("language"),
@@ -109,6 +145,7 @@ const requestSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("complete"),
+      paceChoice: z.enum(["confirmed", "excluded"]).optional(),
       day: z.number().int().min(0).max(3649),
       planId: z.string(),
       opId: z.string().uuid(),
@@ -156,9 +193,12 @@ export function applyAction(
   if (state) state.pace = paceState(state);
   if (op.action === "create") {
     if ((state?.id ?? null) !== op.planId) throw Error("stale");
-    // Old callers/configs remain canonical. New setup explicitly opts in.
+    op.config.edition ??= languageEdition(op.lang);
+    // Each new plan pins a concrete edition; older stored plans retain their basis.
     if (op.config.bookOrderMode === "auto")
-      op.config.bookOrder = languageBookOrder(op.lang);
+      op.config.bookOrder = op.config.edition
+        ? editions[op.config.edition].order
+        : languageBookOrder(op.lang);
     try {
       createPlan(op.config, op.previouslyRead);
     } catch {
@@ -171,6 +211,7 @@ export function applyAction(
       lang: op.lang,
       done: {},
       previouslyRead: op.previouslyRead ?? [],
+      sessions: [],
       logs: [],
       timer: null,
       ops: [],
@@ -178,6 +219,7 @@ export function applyAction(
     };
   } else {
     if (!state || state.id !== op.planId) throw Error("stale");
+    state.sessions = sessionsFor(state);
     const days = createPlan(state.config, state.previouslyRead);
     if ("day" in op && op.day >= days.length) throw Error("invalid");
     const date = today(state.config.timezone, now);
@@ -200,11 +242,24 @@ export function applyAction(
       if (seconds)
         state.logs.push({
           day: state.timer.day,
+          readingDate: today(state.config.timezone, state.timer.startedAt),
           seconds,
           at: new Date(now).toISOString(),
         });
       state.timer = null;
     }
+    if (op.action === "review-pace") {
+      const sample = state.pace!.samples[op.index];
+      if (!sample || sample.seconds !== op.seconds) throw Error("stale");
+      if (op.review === "auto") delete sample.review;
+      else sample.review = op.review;
+    }
+    if (op.action === "edition") {
+      if (state.timer) throw Error("timer");
+      changeEdition(state, op.edition);
+      state = prepareState(state, date);
+    }
+    if (op.action === "review-edition") delete state.editionReview;
     if (op.action === "previous") {
       if (state.timer) throw Error("timer");
       const allowed = new Set(scopeChapters(state.config).map((c) => c.id));
@@ -269,7 +324,33 @@ export function applyAction(
     if (op.action === "complete") {
       if (state.timer && state.timer.day !== op.day) throw Error("timer");
       if (state.timer?.day === op.day) stop();
-      finishPace(state, op.day);
+      const recorded = new Set(state.sessions!.flatMap((s) => s.chapters));
+      const ids = Object.keys(state.done)
+        .map(Number)
+        .filter((id) => !recorded.has(id));
+      const seconds = Math.max(
+        0,
+        state.logs
+          .filter((l) => l.day === op.day)
+          .reduce((n, l) => n + l.seconds, 0) -
+          state
+            .sessions!.filter((s) => s.day === op.day)
+            .reduce((n, s) => n + s.seconds, 0),
+      );
+      if (
+        !state.adaptive!.finished.includes(currentDay) &&
+        (ids.length || seconds > 0)
+      )
+        state.sessions!.push({
+          id: op.opId,
+          day: op.day,
+          date:
+            state.logs.filter((l) => l.day === op.day).at(-1)?.readingDate ??
+            date,
+          chapters: ids,
+          seconds,
+        });
+      finishPace(state, op.day, op.paceChoice);
       state.adaptive!.finished = [
         ...new Set([...state.adaptive!.finished, currentDay]),
       ];
@@ -300,14 +381,60 @@ export function applyAction(
       if (op.mode !== "start") stop();
     }
     if (op.action === "correct") {
-      if (state.timer?.day === op.day) state.timer = null;
+      const active = state.timer?.day === op.day ? state.timer : null;
+      if (active) stop();
+      const oldLogs = state.logs.filter((l) => l.day === op.day);
+      const oldTotal = oldLogs.reduce((n, l) => n + l.seconds, 0);
+      const open =
+        state.pace?.draft?.day === op.day &&
+        !state.adaptive!.finished.includes(op.day);
+      const sessions = state.sessions!.filter((s) => s.day === op.day);
+      const total = Math.round(op.minutes * 60);
+      let assigned = 0;
+      sessions.forEach((s, i) => {
+        const value =
+          i === sessions.length - 1 && !open
+            ? total - assigned
+            : Math.round(
+                total *
+                  (oldTotal
+                    ? s.seconds / oldTotal
+                    : 1 / (sessions.length + (open ? 1 : 0))),
+              );
+        s.seconds = Math.max(0, Math.min(total - assigned, value));
+        assigned += s.seconds;
+      });
+      const dates = new Map<string, number>();
+      for (const log of oldLogs) {
+        const date = logDate(state, log);
+        dates.set(date, (dates.get(date) ?? 0) + log.seconds);
+      }
+      if (!dates.size)
+        dates.set(
+          active
+            ? today(state.config.timezone, active.startedAt)
+            : addDays(state.config.start, op.day),
+          0,
+        );
       state.logs = state.logs.filter((l) => l.day !== op.day);
-      if (op.minutes > 0)
-        state.logs.push({
-          day: op.day,
-          seconds: Math.round(op.minutes * 60),
-          at: new Date(now).toISOString(),
-        });
+      let allocated = 0;
+      [...dates].forEach(([readingDate, seconds], i) => {
+        const value =
+          i === dates.size - 1
+            ? total - allocated
+            : Math.round(
+                total * (oldTotal ? seconds / oldTotal : 1 / dates.size),
+              );
+        const part = Math.max(0, Math.min(total - allocated, value));
+        allocated += part;
+        if (part)
+          state!.logs.push({
+            day: op.day,
+            readingDate,
+            seconds: part,
+            at: new Date(now).toISOString(),
+          });
+      });
       correctPace(state, op.day);
     }
     if (op.action === "settings") {
@@ -328,7 +455,9 @@ export function applyAction(
         op.action === "book-order" && op.choice !== "auto"
           ? op.choice
           : state.config.bookOrderMode === "auto"
-            ? languageBookOrder(op.lang)
+            ? state.config.edition
+              ? editions[state.config.edition].order
+              : languageBookOrder(op.lang)
             : (state.pendingBookOrder ?? state.config.bookOrder ?? "western");
       if (wanted !== (state.config.bookOrder ?? "western"))
         state.pendingBookOrder = wanted;

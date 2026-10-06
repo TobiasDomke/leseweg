@@ -1,5 +1,5 @@
 import {
-  chapters,
+  chaptersFor,
   orderedChapters,
   boundaryPreference,
   assertCoverage,
@@ -122,6 +122,7 @@ export function readingPlan(
   date = today(state.config.timezone),
 ): Day[] {
   const prepared = prepareState(state, date);
+  const chapters = chaptersFor(prepared.config);
   return prepared.adaptive!.days.map((ids, index) => ({
     index,
     date: addDays(state.config.start, index),

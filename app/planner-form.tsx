@@ -1,4 +1,6 @@
 "use client";
+import { languageEdition, editionName } from "@/lib/editions";
+import { experienceText } from "@/lib/experience-i18n";
 import { useMemo, useRef, useState } from "react";
 import { BookOpen, CalendarDays, Sparkles, CircleCheck } from "lucide-react";
 import {
@@ -33,6 +35,7 @@ export default function PlannerForm({
     [previouslyRead, setPrevious] = useState<number[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
   const [draftConfig, setConfig] = useState<Config>({
+    edition: languageEdition(lang),
     amount: 12,
     unit: "months",
     start: today(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
@@ -145,19 +148,27 @@ export default function PlannerForm({
                     </label>
                   ))}
                 </fieldset>
-                <BookOrderControl
-                  config={config}
-                  lang={lang}
-                  disabled={busy}
-                  onChange={(choice) =>
-                    setConfig({
-                      ...config,
-                      bookOrderMode: choice === "auto" ? "auto" : "manual",
-                      bookOrder:
-                        choice === "auto" ? languageBookOrder(lang) : choice,
-                    })
-                  }
-                />
+                <p className="notice">
+                  <strong>
+                    {experienceText(lang).edition}: {editionName(config)}
+                  </strong>
+                </p>
+                <details className="method">
+                  <summary>{experienceText(lang).advanced}</summary>
+                  <BookOrderControl
+                    config={config}
+                    lang={lang}
+                    disabled={busy}
+                    onChange={(choice) =>
+                      setConfig({
+                        ...config,
+                        bookOrderMode: choice === "auto" ? "auto" : "manual",
+                        bookOrder:
+                          choice === "auto" ? languageBookOrder(lang) : choice,
+                      })
+                    }
+                  />
+                </details>
                 <fieldset className="choice-field">
                   <legend>{p.order}</legend>
                   {(["canonical", "chronological", "mixed"] as const).map(
@@ -348,7 +359,11 @@ export default function PlannerForm({
             </div>
           ))}
         </div>
-        <p className="fineprint">{t.method}</p>
+        <details className="method">
+          <summary>{experienceText(lang).advanced}</summary>
+          <p className="fineprint">{experienceText(lang).approxWeights}</p>
+          <p>{experienceText(lang).editionHelp}</p>
+        </details>
       </aside>
     </div>
   );

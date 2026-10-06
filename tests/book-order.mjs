@@ -52,8 +52,20 @@ const act = (s, op, at = now) =>
     { ...op, planId: s?.id ?? null, opId: crypto.randomUUID() },
     at,
   );
-const fresh = (config = base, lang = "de", previouslyRead = []) =>
-  act(null, { action: "create", config, lang, previouslyRead });
+// This regression suite describes legacy plans without a pinned edition.
+// New edition-pinned behavior is covered in editions-experience.mjs.
+const fresh = (config = base, lang = "de", previouslyRead = []) => {
+  const s = act(null, {
+    action: "create",
+    config: { ...config, edition: "schlachter2000" },
+    lang,
+    previouslyRead,
+  });
+  delete s.config.edition;
+  if (config.bookOrderMode === "auto")
+    s.pendingBookOrder = languageBookOrder(lang);
+  return prepareState(s, config.start);
+};
 const id = (code, number = 1) =>
   chapters.find((c) => c.code === code && c.number === number).id;
 

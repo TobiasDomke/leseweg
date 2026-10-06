@@ -1,6 +1,6 @@
-import { chapters, createPlan, today } from "./planner";
+import { chaptersFor, createPlan, today } from "./planner";
 import { dayIndex, readChaptersOnDay } from "./adaptive";
-import type { PaceState, ReadingState } from "./state";
+import type { PaceSample, PaceState, ReadingState } from "./state";
 
 const savedSeconds = (state: ReadingState, day: number) =>
   state.logs
@@ -58,7 +58,11 @@ export function startPace(state: ReadingState, day: number) {
   };
 }
 
-export function finishPace(state: ReadingState, finishedDay: number) {
+export function finishPace(
+  state: ReadingState,
+  finishedDay: number,
+  review?: PaceSample["review"],
+) {
   const pace = state.pace!;
   const draft = pace.draft;
   if (!draft || draft.day > finishedDay) return;
@@ -83,7 +87,12 @@ export function finishPace(state: ReadingState, finishedDay: number) {
   );
   const seconds = savedSeconds(state, day) - draft.secondsBefore;
   if (ids.length && seconds > 0)
-    pace.samples.push({ day, chapters: ids, seconds });
+    pace.samples.push({
+      day,
+      chapters: ids,
+      seconds,
+      ...(review ? { review } : {}),
+    });
   pace.draft = null;
 }
 
@@ -123,22 +132,65 @@ export function forgetPaceChapter(state: ReadingState, chapter: number) {
   );
 }
 
+export function sampleNeedsReview(
+  sample: PaceSample,
+  state: ReadingState,
+  baseline = 60 / 180,
+) {
+  const chapters = chaptersFor(state.config);
+  const words = sample.chapters.reduce(
+    (n, id) => n + (chapters[id]?.words ?? 0),
+    0,
+  );
+  if (!words || !sample.seconds) return false;
+  const rate = sample.seconds / words;
+  return (
+    sample.seconds > 14400 ||
+    rate > Math.max(3 * baseline, 2) ||
+    rate < Math.min(baseline / 3, 0.05)
+  );
+}
 export function readingPace(state: ReadingState | null) {
-  const samples = state
-    ? paceState(state).samples.filter(
-        (sample) =>
-          sample.seconds > 0 &&
-          sample.chapters.length > 0 &&
-          sample.chapters.every((id) => state.done[id] && chapters[id]),
-      )
-    : [];
-  const seconds = samples.reduce((sum, sample) => sum + sample.seconds, 0);
-  const ids = samples.flatMap((sample) => sample.chapters);
-  const words = ids.reduce((sum, id) => sum + chapters[id].words, 0);
+  const chapters = chaptersFor(state?.config);
+  const accepted: PaceSample[] = [];
+  let excluded = 0;
+  for (const sample of state ? paceState(state).samples : []) {
+    if (
+      sample.seconds <= 0 ||
+      !sample.chapters.length ||
+      !sample.chapters.every((id) => state!.done[id] && chapters[id])
+    )
+      continue;
+    const priorWords = accepted
+      .flatMap((s) => s.chapters)
+      .reduce((n, id) => n + chapters[id].words, 0);
+    const baseline =
+      accepted.length >= 3
+        ? accepted.reduce((n, s) => n + s.seconds, 0) / priorWords
+        : 60 / 180;
+    if (
+      sample.review === "excluded" ||
+      (sample.review !== "confirmed" &&
+        sampleNeedsReview(sample, state!, baseline))
+    ) {
+      excluded++;
+      continue;
+    }
+    accepted.push(sample);
+  }
+  const seconds = accepted.reduce((n, s) => n + s.seconds, 0);
+  const ids = accepted.flatMap((s) => s.chapters);
+  const words = ids.reduce((n, id) => n + chapters[id].words, 0);
+  const confidence = Math.min(1, accepted.length / 5, words / 2500);
   return {
-    personal: words > 0 && seconds > 0,
-    // Weight by text length, not by chapter or session count.
-    secondsPerWord: words > 0 && seconds > 0 ? seconds / words : 60 / 180,
+    personal: confidence === 1,
+    learning: confidence > 0 && confidence < 1,
+    samples: accepted.length,
+    excluded,
+    secondsPerWord:
+      words > 0
+        ? (60 / 180) * (1 - confidence) + (seconds / words) * confidence
+        : 60 / 180,
     chapters: ids.length,
     seconds,
   };

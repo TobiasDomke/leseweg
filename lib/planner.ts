@@ -1,9 +1,12 @@
+import { sourceParts, type Edition } from "./editions";
+import editionCanon from "./edition-canon.json";
 import books from "./bible-lengths.json";
 import canon from "./schlachter-canon.json";
 import { chronologicalBlocks, cohesiveReferences } from "./reading-order";
 import { sortByBookOrder, type BookOrder } from "./book-order";
 export type Unit = "days" | "weeks" | "months";
 export type Config = {
+  edition?: Edition;
   amount: number;
   unit: Unit;
   start: string;
@@ -35,6 +38,63 @@ export const chapters: Chapter[] = books
     })),
   )
   .map((c, id) => ({ ...c, id }));
+const editionChapters = new Map<Edition, Chapter[]>();
+export function chaptersFor(config: { edition?: Edition } = {}): Chapter[] {
+  const edition = config.edition ?? "schlachter2000";
+  if (edition === "schlachter2000") return chapters;
+  const cached = editionChapters.get(edition);
+  if (cached) return cached;
+  const result = books
+    .flatMap((book, bookIndex) =>
+      Array.from(
+        { length: editionCanon.books[bookIndex][edition] },
+        (_, i) => ({
+          id: 0,
+          bookIndex,
+          book: book.name,
+          code: book.code,
+          number: i + 1,
+          words: Math.max(
+            1,
+            Math.round(
+              sourceParts(edition, book.code, i + 1).reduce(
+                (sum, [n, part]) => sum + book.words[n - 1] * part,
+                0,
+              ),
+            ),
+          ),
+        }),
+      ),
+    )
+    .map((c, id) => ({ ...c, id }));
+  if (result.length !== 1189 || result.some((c) => !Number.isFinite(c.words)))
+    throw Error("edition");
+  editionChapters.set(edition, result);
+  return result;
+}
+// Convert editorial content links, never numeric chapter IDs, between editions.
+function mapEditorial(items: Chapter[], config: { edition?: Edition }) {
+  if (!config.edition || config.edition === "schlachter2000") return items;
+  const candidates = chaptersFor(config),
+    used = new Set<number>();
+  return items
+    .flatMap((source) =>
+      candidates.filter(
+        (c) =>
+          c.code === source.code &&
+          sourceParts(
+            config.edition ?? "schlachter2000",
+            c.code,
+            c.number,
+          ).some(([n]) => n === source.number),
+      ),
+    )
+    .filter((c) => {
+      if (used.has(c.id)) return false;
+      used.add(c.id);
+      return true;
+    });
+}
 // This independent inventory was checked book by book against the publisher's
 // chapter headings. A correct grand total alone cannot detect swapped counts.
 export function assertCanonInventory(
@@ -109,9 +169,11 @@ export type Day = {
   chapters: Chapter[];
   words: number;
 };
-export function scopeChapters(config: Pick<Config, "scope" | "bookOrder">) {
+export function scopeChapters(
+  config: Pick<Config, "scope" | "bookOrder" | "edition">,
+) {
   return sortByBookOrder(
-    chapters.filter((c) =>
+    chaptersFor(config).filter((c) =>
       config.scope === "ot"
         ? c.bookIndex < 39
         : config.scope === "nt"
@@ -142,6 +204,30 @@ export const historicalGroups = chronologicalBlocks.map((block, index) => ({
   chapters: referenceChapters(block.refs),
 }));
 const chronological = historicalGroups.flatMap((group) => group.chapters);
+const historicalCache = new Map<Edition, typeof historicalGroups>();
+export function historicalGroupsFor(config: { edition?: Edition }) {
+  const edition = config.edition ?? "schlachter2000";
+  if (edition === "schlachter2000") return historicalGroups;
+  const cached = historicalCache.get(edition);
+  if (cached) return cached;
+  const used = new Set<number>();
+  const groups = historicalGroups
+    .map((group) => ({
+      ...group,
+      chapters: mapEditorial(group.chapters, config).filter((c) => {
+        if (used.has(c.id)) return false;
+        used.add(c.id);
+        return true;
+      }),
+    }))
+    .filter((g) => g.chapters.length);
+  assertCoverage(
+    chaptersFor(config),
+    groups.flatMap((g) => g.chapters.map((c) => c.id)),
+  );
+  historicalCache.set(edition, groups);
+  return groups;
+}
 export function assertCoverage(expected: Chapter[], ids: number[]) {
   const wanted = new Set(expected.map((c) => c.id));
   if (
@@ -187,7 +273,7 @@ function mixedChapters(items: Chapter[]) {
 }
 const orderCache = new Map<string, Chapter[]>();
 export function orderedChapters(config: Config) {
-  const key = `${config.scope ?? "bible"}:${config.order ?? "canonical"}:${config.bookOrder ?? "western"}`;
+  const key = `${config.edition ?? "schlachter2000"}:${config.scope ?? "bible"}:${config.order ?? "canonical"}:${config.bookOrder ?? "western"}`;
   const cached = orderCache.get(key);
   if (cached) return cached;
   const ordered = buildOrder(config);
@@ -199,17 +285,23 @@ function buildOrder(config: Config) {
   if (config.order === "mixed") return mixedChapters(scope);
   if (config.order === "chronological") {
     const ids = new Set(scope.map((c) => c.id));
-    return chronological.filter((c) => ids.has(c.id));
+    return historicalGroupsFor(config)
+      .flatMap((g) => g.chapters)
+      .filter((c) => ids.has(c.id));
   }
   return scope;
 }
 const cohesiveGroups = cohesiveReferences.map(referenceChapters);
+const cohesiveCache = new Map<Edition, Chapter[][]>();
 export function boundaryPreference(config: Config) {
   if (!config.keepTogether) return undefined;
   const groups =
     config.order === "chronological"
-      ? historicalGroups.map((g) => g.chapters)
-      : cohesiveGroups;
+      ? historicalGroupsFor(config).map((g) => g.chapters)
+      : (cohesiveCache.get(config.edition ?? "schlachter2000") ??
+        cohesiveGroups.map((group) => mapEditorial(group, config)));
+  if (config.order !== "chronological")
+    cohesiveCache.set(config.edition ?? "schlachter2000", groups);
   const membership = new Map(
     groups.flatMap((group, i) => group.map((c) => [c.id, i] as const)),
   );

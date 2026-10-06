@@ -1,3 +1,4 @@
+import { experienceText } from "@/lib/experience-i18n";
 import { useId } from "react";
 import books from "@/lib/bible-lengths.json";
 import { scopeChapters, type Config } from "@/lib/planner";
@@ -62,7 +63,7 @@ export default function BookOrderControl({
         </p>
         <p>{t.planning}</p>
       </details>
-      <p className="fineprint">{t.numbering}</p>
+      <p className="fineprint">{experienceText(lang).editionHelp}</p>
     </div>
   );
 }

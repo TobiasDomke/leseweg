@@ -53,6 +53,21 @@ const stateSchema = z
       })
       .strict()
       .optional(),
+    editionReview: z.array(z.string().max(200)).max(10000).optional(),
+    sessions: z
+      .array(
+        z
+          .object({
+            id: z.string().max(100),
+            day: z.number().int().min(0).max(3649),
+            date,
+            chapters: previousSchema,
+            seconds: z.number().int().min(0).max(315576000),
+          })
+          .strict(),
+      )
+      .max(100000)
+      .optional(),
     config: configSchema,
     lang: z.enum(languageCodes),
     pendingBookOrder: z.enum(bookOrders).optional(),
@@ -80,6 +95,7 @@ const stateSchema = z
             day: z.number().int().min(0).max(3649),
             seconds: z.number().int().min(0).max(315576000),
             at: timestamp,
+            readingDate: date.optional(),
           })
           .strict(),
       )
@@ -93,6 +109,7 @@ const stateSchema = z
             z
               .object({
                 day: z.number().int().min(0).max(3649),
+                review: z.enum(["confirmed", "excluded"]).optional(),
                 chapters: z
                   .array(z.number().int().min(0).max(1188))
                   .min(1)
@@ -145,6 +162,7 @@ const schema = z
       z.literal(4),
       z.literal(5),
       z.literal(6),
+      z.literal(7),
     ]),
     exportedAt: timestamp,
     theme: z.enum(["light", "dark"]),
@@ -172,6 +190,15 @@ export function parseBackup(raw: string): Backup {
     Object.entries(backup.state.completionDays ?? {}).some(
       ([id, day]) => !backup.state.done[id] || day >= days,
     )
+  )
+    throw Error("backup");
+  if (
+    backup.state.sessions &&
+    (new Set(backup.state.sessions.map((s) => s.id)).size !==
+      backup.state.sessions.length ||
+      backup.state.sessions.some(
+        (s) => s.day >= days || s.chapters.some((id) => !expected.has(id)),
+      ))
   )
     throw Error("backup");
   const pace = backup.state.pace;
@@ -268,6 +295,12 @@ export function makeBackup(
     if (seconds)
       snapshot.logs.push({
         day: snapshot.timer.day,
+        readingDate: new Intl.DateTimeFormat("en-CA", {
+          timeZone: snapshot.config.timezone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(snapshot.timer.startedAt),
         seconds,
         at: new Date(now).toISOString(),
       });
@@ -289,7 +322,7 @@ export function makeBackup(
   return JSON.stringify(
     {
       app: "leseweg",
-      version: 6,
+      version: 7,
       exportedAt: new Date(now).toISOString(),
       theme: theme === "dark" ? "dark" : "light",
       state: snapshot,

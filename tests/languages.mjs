@@ -107,7 +107,7 @@ for (const lang of languageCodes) {
   assert.equal(restored.state.config.amount, original.config.amount);
   assert.equal(
     restored.state.config.bookOrder,
-    lang === "ru" || lang === "uk" ? "eastern" : "western",
+    "eastern", // The Ohienko edition stays pinned when UI language changes.
   );
   assert.deepEqual(
     restored.state.adaptive.finished,

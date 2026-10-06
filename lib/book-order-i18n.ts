@@ -2,7 +2,7 @@ import type { Lang } from "./languages";
 
 const de = {
   title: "Buchreihenfolge deiner Papierbibel",
-  auto: "Automatisch zur Sprache",
+  auto: "Automatisch zur Bibelausgabe",
   western: "Nach Apostelgeschichte: Römer",
   eastern: "Nach Apostelgeschichte: Jakobus",
   help: "Deutsch und Englisch: Römer zuerst. Russisch und Ukrainisch: Jakobus zuerst, wie in verbreiteten Synodal- und Ohijenko-Ausgaben. Wähle bei einer anderen Druckausgabe die passende Reihenfolge selbst.",
@@ -18,7 +18,7 @@ const de = {
 type Labels = { [K in keyof typeof de]: string };
 const ru: Labels = {
   title: "Порядок книг в твоей печатной Библии",
-  auto: "Автоматически по языку",
+  auto: "Автоматически по переводу",
   western: "После Деяний: Римлянам",
   eastern: "После Деяний: Иакова",
   help: "Немецкий и английский: сначала Римлянам. Русский и украинский: сначала Иакова, как в распространённых изданиях Синодального перевода и перевода Огиенко. Для другого издания выбери подходящий порядок вручную.",
@@ -33,7 +33,7 @@ const ru: Labels = {
 };
 const en: Labels = {
   title: "Book order in your paper Bible",
-  auto: "Follow the selected language",
+  auto: "Follow the Bible edition",
   western: "After Acts: Romans",
   eastern: "After Acts: James",
   help: "German and English: Romans first. Russian and Ukrainian: James first, as in common Synodal and Ohienko editions. Choose the matching order manually if your printed edition differs.",
@@ -48,7 +48,7 @@ const en: Labels = {
 };
 const uk: Labels = {
   title: "Порядок книг у твоїй паперовій Біблії",
-  auto: "Автоматично за мовою",
+  auto: "Автоматично за перекладом",
   western: "Після Дій: До Римлян",
   eastern: "Після Дій: Якова",
   help: "Німецька й англійська: спочатку До Римлян. Російська й українська: спочатку Якова, як у поширених виданнях Синодального перекладу та перекладу Огієнка. Для іншого видання обери відповідний порядок вручну.",

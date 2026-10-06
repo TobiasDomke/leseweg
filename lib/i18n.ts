@@ -631,9 +631,9 @@ const rows = {
   ],
   editTime: ["Lesezeit korrigieren", "Исправить время", "Correct reading time"],
   minutesLabel: [
-    "Gesamte Minuten dieser Einheit",
-    "Всего минут этого чтения",
-    "Total minutes for this reading",
+    "Gesamte Minuten dieses Lesetages",
+    "Всего минут за этот день чтения",
+    "Total minutes for this reading day",
   ],
   unavailable: [
     "Der Speicher dieses Browsers ist nicht verfügbar. Bitte verwende ein normales Browserfenster und erlaube das Speichern von Websitedaten.",

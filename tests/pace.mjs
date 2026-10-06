@@ -15,7 +15,7 @@ await build({
 });
 const { applyAction } = await import("../.test-runtime/actions.js");
 const { chapters } = await import("../.test-runtime/planner.js");
-const { readingPace, estimatedMinutes } = await import(
+const { readingPace, estimatedMinutes, paceState } = await import(
   "../.test-runtime/pace.js"
 );
 const { makeBackup, parseBackup } = await import("../.test-runtime/backup.js");
@@ -53,7 +53,13 @@ const correct = (state, minutes, day = 0) =>
   act(state, { action: "correct", minutes, day });
 const words = (ids) => ids.reduce((sum, id) => sum + chapters[id].words, 0);
 const expected = (seconds, ids) => seconds / words(ids);
-const rate = (state) => readingPace(state).secondsPerWord;
+const rate = (state) => {
+  const p = readingPace(state);
+  const ids = paceState(state)
+    .samples.filter((s) => s.review !== "excluded")
+    .flatMap((s) => s.chapters);
+  return ids.length && p.seconds ? p.seconds / words(ids) : p.secondsPerWord;
+};
 const empty = fresh();
 assert.equal(readingPace(empty).personal, false);
 assert.equal(estimatedMinutes(1800, readingPace(empty)), 10);
@@ -242,7 +248,7 @@ assert.equal(rate(legacyFixed), expected(600, [0, 1, 2]));
 // The learning data and pending baseline survive backup/restore with the timer paused.
 const raw = makeBackup(second, "de", "light", now);
 const restored = parseBackup(raw);
-assert.equal(restored.version, 6);
+assert.equal(restored.version, 7);
 assert.equal(rate(restored.state), rate(second));
 assert.deepEqual(restored.state.pace, second.pace);
 const liveBackup = parseBackup(

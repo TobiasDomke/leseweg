@@ -87,7 +87,7 @@ await assert.rejects(
 
 for (const mutate of [
   (b) => {
-    b.version = 7;
+    b.version = 8;
   },
   (b) => {
     b.state.config.start = "2026-02-30";

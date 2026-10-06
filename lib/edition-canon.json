@@ -1,0 +1,407 @@
+{
+  "checked": "2026-10-06",
+  "scope": "66-book editions; no deuterocanonical books or Psalm 151",
+  "sources": {
+    "kjv": "https://only.bible/bible/kjv/",
+    "synodal": "https://only.bible/bible/rst66/",
+    "ohienko": "https://only.bible/bible/ubio/"
+  },
+  "books": [
+    {
+      "code": "GEN",
+      "kjv": 50,
+      "synodal": 50,
+      "ohienko": 50
+    },
+    {
+      "code": "EXO",
+      "kjv": 40,
+      "synodal": 40,
+      "ohienko": 40
+    },
+    {
+      "code": "LEV",
+      "kjv": 27,
+      "synodal": 27,
+      "ohienko": 27
+    },
+    {
+      "code": "NUM",
+      "kjv": 36,
+      "synodal": 36,
+      "ohienko": 36
+    },
+    {
+      "code": "DEU",
+      "kjv": 34,
+      "synodal": 34,
+      "ohienko": 34
+    },
+    {
+      "code": "JOS",
+      "kjv": 24,
+      "synodal": 24,
+      "ohienko": 24
+    },
+    {
+      "code": "JDG",
+      "kjv": 21,
+      "synodal": 21,
+      "ohienko": 21
+    },
+    {
+      "code": "RUT",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "1SA",
+      "kjv": 31,
+      "synodal": 31,
+      "ohienko": 31
+    },
+    {
+      "code": "2SA",
+      "kjv": 24,
+      "synodal": 24,
+      "ohienko": 24
+    },
+    {
+      "code": "1KI",
+      "kjv": 22,
+      "synodal": 22,
+      "ohienko": 22
+    },
+    {
+      "code": "2KI",
+      "kjv": 25,
+      "synodal": 25,
+      "ohienko": 25
+    },
+    {
+      "code": "1CH",
+      "kjv": 29,
+      "synodal": 29,
+      "ohienko": 29
+    },
+    {
+      "code": "2CH",
+      "kjv": 36,
+      "synodal": 36,
+      "ohienko": 36
+    },
+    {
+      "code": "EZR",
+      "kjv": 10,
+      "synodal": 10,
+      "ohienko": 10
+    },
+    {
+      "code": "NEH",
+      "kjv": 13,
+      "synodal": 13,
+      "ohienko": 13
+    },
+    {
+      "code": "EST",
+      "kjv": 10,
+      "synodal": 10,
+      "ohienko": 10
+    },
+    {
+      "code": "JOB",
+      "kjv": 42,
+      "synodal": 42,
+      "ohienko": 42
+    },
+    {
+      "code": "PSA",
+      "kjv": 150,
+      "synodal": 150,
+      "ohienko": 150
+    },
+    {
+      "code": "PRO",
+      "kjv": 31,
+      "synodal": 31,
+      "ohienko": 31
+    },
+    {
+      "code": "ECC",
+      "kjv": 12,
+      "synodal": 12,
+      "ohienko": 12
+    },
+    {
+      "code": "SNG",
+      "kjv": 8,
+      "synodal": 8,
+      "ohienko": 8
+    },
+    {
+      "code": "ISA",
+      "kjv": 66,
+      "synodal": 66,
+      "ohienko": 66
+    },
+    {
+      "code": "JER",
+      "kjv": 52,
+      "synodal": 52,
+      "ohienko": 52
+    },
+    {
+      "code": "LAM",
+      "kjv": 5,
+      "synodal": 5,
+      "ohienko": 5
+    },
+    {
+      "code": "EZK",
+      "kjv": 48,
+      "synodal": 48,
+      "ohienko": 48
+    },
+    {
+      "code": "DAN",
+      "kjv": 12,
+      "synodal": 12,
+      "ohienko": 12
+    },
+    {
+      "code": "HOS",
+      "kjv": 14,
+      "synodal": 14,
+      "ohienko": 14
+    },
+    {
+      "code": "JOL",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "AMO",
+      "kjv": 9,
+      "synodal": 9,
+      "ohienko": 9
+    },
+    {
+      "code": "OBA",
+      "kjv": 1,
+      "synodal": 1,
+      "ohienko": 1
+    },
+    {
+      "code": "JON",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "MIC",
+      "kjv": 7,
+      "synodal": 7,
+      "ohienko": 7
+    },
+    {
+      "code": "NAM",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "HAB",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "ZEP",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "HAG",
+      "kjv": 2,
+      "synodal": 2,
+      "ohienko": 2
+    },
+    {
+      "code": "ZEC",
+      "kjv": 14,
+      "synodal": 14,
+      "ohienko": 14
+    },
+    {
+      "code": "MAL",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "MAT",
+      "kjv": 28,
+      "synodal": 28,
+      "ohienko": 28
+    },
+    {
+      "code": "MRK",
+      "kjv": 16,
+      "synodal": 16,
+      "ohienko": 16
+    },
+    {
+      "code": "LUK",
+      "kjv": 24,
+      "synodal": 24,
+      "ohienko": 24
+    },
+    {
+      "code": "JHN",
+      "kjv": 21,
+      "synodal": 21,
+      "ohienko": 21
+    },
+    {
+      "code": "ACT",
+      "kjv": 28,
+      "synodal": 28,
+      "ohienko": 28
+    },
+    {
+      "code": "ROM",
+      "kjv": 16,
+      "synodal": 16,
+      "ohienko": 16
+    },
+    {
+      "code": "1CO",
+      "kjv": 16,
+      "synodal": 16,
+      "ohienko": 16
+    },
+    {
+      "code": "2CO",
+      "kjv": 13,
+      "synodal": 13,
+      "ohienko": 13
+    },
+    {
+      "code": "GAL",
+      "kjv": 6,
+      "synodal": 6,
+      "ohienko": 6
+    },
+    {
+      "code": "EPH",
+      "kjv": 6,
+      "synodal": 6,
+      "ohienko": 6
+    },
+    {
+      "code": "PHP",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "COL",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "1TH",
+      "kjv": 5,
+      "synodal": 5,
+      "ohienko": 5
+    },
+    {
+      "code": "2TH",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "1TI",
+      "kjv": 6,
+      "synodal": 6,
+      "ohienko": 6
+    },
+    {
+      "code": "2TI",
+      "kjv": 4,
+      "synodal": 4,
+      "ohienko": 4
+    },
+    {
+      "code": "TIT",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "PHM",
+      "kjv": 1,
+      "synodal": 1,
+      "ohienko": 1
+    },
+    {
+      "code": "HEB",
+      "kjv": 13,
+      "synodal": 13,
+      "ohienko": 13
+    },
+    {
+      "code": "JAS",
+      "kjv": 5,
+      "synodal": 5,
+      "ohienko": 5
+    },
+    {
+      "code": "1PE",
+      "kjv": 5,
+      "synodal": 5,
+      "ohienko": 5
+    },
+    {
+      "code": "2PE",
+      "kjv": 3,
+      "synodal": 3,
+      "ohienko": 3
+    },
+    {
+      "code": "1JN",
+      "kjv": 5,
+      "synodal": 5,
+      "ohienko": 5
+    },
+    {
+      "code": "2JN",
+      "kjv": 1,
+      "synodal": 1,
+      "ohienko": 1
+    },
+    {
+      "code": "3JN",
+      "kjv": 1,
+      "synodal": 1,
+      "ohienko": 1
+    },
+    {
+      "code": "JUD",
+      "kjv": 1,
+      "synodal": 1,
+      "ohienko": 1
+    },
+    {
+      "code": "REV",
+      "kjv": 22,
+      "synodal": 22,
+      "ohienko": 22
+    }
+  ]
+}

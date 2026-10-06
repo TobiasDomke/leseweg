@@ -31,11 +31,11 @@ Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 - Zusätzliche Kapitel hinzufügen und nach einer beendeten Einheit am selben Tag weiterlesen.
 - Historische Tage zeigen tatsächlich gelesene Kapitel; ausgelassene Tage werden
   beim nächsten Öffnen berücksichtigt. Ein überschrittenes Zieldatum wird angezeigt.
-- Kapitel abhaken, Leseeinheiten abschließen, Timer starten/pausieren/stoppen.
+- Kapitel abhaken, Timer starten/pausieren und über „Lesen beenden“ bestätigen.
 - Zeitmessung bleibt nach dem Schließen erhalten; manuelle Zeitkorrektur.
 - Persönliche Zeitschätzungen aus abgeschlossenen Messungen, gewichtet nach Textlänge.
 - Statistik, CSV-Export, Deutsch/Russisch/Englisch/Ukrainisch, heller und dunkler Modus.
-- Buchreihenfolge automatisch zur Sprache (Deutsch/Englisch: Römer nach der
+- Bibelausgabe automatisch zur Sprache bei der Einrichtung; Buchreihenfolge passend zur Ausgabe (Deutsch/Englisch: Römer nach der
   Apostelgeschichte; Russisch/Ukrainisch: Jakobus). Manuell für abweichende
   Druckausgaben einstellbar; Fortschritt und gemessene Zeiten bleiben erhalten.
 - Kalenderexport mit Kapiteln, gewählter Uhrzeit und Zeitzone einschließlich Sommerzeit.
@@ -49,10 +49,50 @@ Die Lesereihenfolgen, ihre historischen Grenzen und die Prüfungen sind in
 
 Die Wortzahlen stammen aus der gemeinfreien Lutherbibel 1912
 ([Datenquelle](https://github.com/midvash/bible-data)). Sie dienen als Näherung
-für die Textlängen in Schlachter 2000. Die Anwendung enthält keine Bibeltexte.
-Die Buchreihenfolge ist anpassbar. Kapitel-, Psalm- und Verszählung werden weiterhin
-auf Grundlage der Schlachter-2000-Papierbibel angegeben; eine vollständige Umrechnung
-in andere Ausgaben ist noch nicht enthalten. Die Auswahl erklärt diese Grenze.
+für die Textlängen. Die Anwendung enthält keine Bibeltexte. Ab 1.9 sind Schlachter
+2000, King James, Synodal (66-Bücher-Ausgabe) und Iwan Ohijenko (1962) eigene
+Kapitelprofile. Joel/Maleachi und die Synodal-Psalmen sind entsprechend zugeordnet;
+Kapitel bleiben ungeteilt. Eine versgenaue Umrechnung wird nicht angeboten.
+Die Buchreihenfolge ist für abweichende Druckausgaben weiterhin anpassbar.
+
+### Update 1.9: Installation und Alltag
+
+Im normalen Browser erscheint nur die Installationsseite. Der Planer ist nach
+Start über das installierte App-Symbol verfügbar. Bestehende Browserdaten lassen
+sich weiterhin exportieren und anschließend in die installierte App importieren.
+Installationserkennung verwendet den tatsächlichen Standalone-Modus, kein
+persistiertes „installiert“-Häkchen. Firefox-Nutzer bekommen einen Hinweis auf
+Browser mit Installationsunterstützung. Das ist eine Bedienregel, kein DRM.
+
+Ein bestehender Plan behält seine Bibelausgabe bei einem Wechsel der Menüsprache.
+Unter Einstellungen lässt sich die Ausgabe mit Bestätigung wechseln. Vollständig
+gelesene Bücher bleiben abgeschlossen; teilweise gelesene Bücher mit geänderter
+Einteilung (Psalmen, Joel, Maleachi) werden zur manuellen Prüfung vorgemerkt.
+Originaldaten bleiben zusätzlich in IndexedDB erhalten. Die Lesezeit bleibt bestehen;
+das Tempotraining beginnt nach dem Editionswechsel erneut. Sicherungsformat 7 und
+IndexedDB-Version 3 verhindern, dass alte App-Versionen neue Daten überschreiben.
+
+Jeder Abschluss erfasst eine eigene Leseeinheit. Eine nachträgliche Korrektur gilt
+für den ausgewählten **Lesetag**, nicht den Tag der Bearbeitung. Bei mehreren
+Einheiten wird die korrigierte Tagessumme proportional verteilt. Sitzungen über
+Mitternacht werden dem Startdatum der jeweiligen Messung zugeordnet.
+
+Die Tempo-Prognose mischt zunächst Startwert und persönliche Messungen; nach fünf
+Messungen und mindestens 2.500 gewichteten Wörtern ist sie vollständig persönlich.
+Ungewöhnlich schnelle/langsame oder über vier Stunden lange Proben werden zunächst
+aus dem Training ausgeschlossen; die gemessene Zeit bleibt in der Statistik.
+Bestätigung, Korrektur und Ausschluss sind möglich. Unter Statistik stehen die
+Messungen mit ihren Einstellungen. Frühere Lesezeit bleibt eine getrennte Schätzung.
+
+Die Sicherungsanzeige nennt den letzten gestarteten Export (Browser können das
+anschließende Speichern nicht bestätigen). Nach mehreren Einheiten bzw. einer Woche
+wird dezent an eine Sicherung erinnert; der Hinweis lässt sich eine Woche ausblenden.
+
+Für lokale visuelle Tests dient bei laufendem `npm run dev` die Seite
+`/tests/preview.html`. Sie zeigt die installierte Ansicht in wählbaren schmalen
+Rahmen und meldet Layoutüberläufe. Diese Testseite gehört nicht zum Produktionsbuild;
+ihr Installations-Override wird im Produktionscode entfernt.
+
 
 Die Sprache lässt sich oben in der App oder in den Einstellungen wählen.
 Ukrainisch (`uk`, „Українська“) umfasst Oberfläche, alle 66 Buchnamen,

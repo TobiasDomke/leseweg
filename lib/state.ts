@@ -1,8 +1,18 @@
 import type { Config } from "./planner";
 import type { Lang } from "./i18n";
 import type { BookOrder } from "./book-order";
-export type TimeLog = { day: number; seconds: number; at: string };
-export type PaceSample = { day: number; chapters: number[]; seconds: number };
+export type TimeLog = {
+  day: number;
+  seconds: number;
+  at: string;
+  readingDate?: string;
+};
+export type PaceSample = {
+  day: number;
+  chapters: number[];
+  seconds: number;
+  review?: "confirmed" | "excluded";
+};
 export type PaceState = {
   samples: PaceSample[];
   draft: {
@@ -15,6 +25,14 @@ export type PaceState = {
 export type ReadingState = {
   id: string;
   chapterSchema?: 2;
+  editionReview?: string[];
+  sessions?: {
+    id: string;
+    day: number;
+    date: string;
+    chapters: number[];
+    seconds: number;
+  }[];
   chapterCorrection?: {
     // Original references, retained for review; never counted as new progress.
     previouslyRead: string[];

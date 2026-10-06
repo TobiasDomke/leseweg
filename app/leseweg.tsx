@@ -1,4 +1,11 @@
 "use client";
+import { useInstallation } from "@/lib/installation";
+import InstallGate from "./install-gate";
+import EditionControl from "./edition-control";
+import { editionName } from "@/lib/editions";
+import { experienceText } from "@/lib/experience-i18n";
+import { sessionsFor, dailySeconds } from "@/lib/session-stats";
+import { useBackupStatus, recordBackup } from "@/lib/backup-status";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
@@ -9,7 +16,6 @@ import {
   CircleCheck,
   Play,
   Pause,
-  Square,
   BarChart3,
   Settings,
   Sun,
@@ -57,7 +63,8 @@ import {
 } from "@/lib/languages";
 import {
   createPlan,
-  chapters,
+  chaptersFor,
+  type Chapter,
   scopeChapters,
   today,
   dateAt,
@@ -67,7 +74,7 @@ import {
   type Config,
 } from "@/lib/planner";
 import { daySeconds, type ReadingState } from "@/lib/state";
-import { readingPace, estimatedMinutes } from "@/lib/pace";
+import { readingPace, estimatedMinutes, sampleNeedsReview } from "@/lib/pace";
 import { applyAction } from "@/lib/actions";
 import { calendarFile, csvFile, downloadFile } from "@/lib/exports";
 import PlannerForm from "./planner-form";
@@ -91,7 +98,10 @@ import {
   readChaptersOnDay,
 } from "@/lib/adaptive";
 type Status = "loading" | "ready" | "error";
-export default function Leseweg() {
+export default function Leseweg({
+  previewInstalled = false,
+  previewTab = "today",
+}: { previewInstalled?: boolean; previewTab?: string } = {}) {
   const [lang, setLang] = useState<Lang>("de"),
     [theme, setTheme] = useState("light"),
     [state, setState] = useState<ReadingState | null>(null),
@@ -99,7 +109,7 @@ export default function Leseweg() {
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [error, setError] = useState(""),
-    [tab, setTab] = useState("today"),
+    [tab, setTab] = useState(import.meta.env.DEV ? previewTab : "today"),
     [selected, setSelected] = useState<number | null>(null),
     [page, setPage] = useState(0),
     [now, setNow] = useState(Date.now()),
@@ -112,6 +122,25 @@ export default function Leseweg() {
     [reminderTime, setReminderTime] = useState("07:30"),
     [zone, setZone] = useState("Europe/Berlin");
   const offlineSupport = useOffline();
+  const installState = useInstallation();
+  const installation = {
+    ...installState,
+    standalone:
+      installState.standalone || (import.meta.env.DEV && previewInstalled),
+  };
+  const e = experienceText(lang);
+  const backupHistory = useBackupStatus(state?.id ?? null);
+  const [confirmPace, setConfirmPace] = useState(false);
+  const chapterInventory = chaptersFor(state?.config);
+  const sessions = state ? sessionsFor(state) : [];
+  const chartValues = state ? dailySeconds(state, now) : {};
+  const backupDue =
+    !!state &&
+    (sessions.length >= 3 ||
+      (Object.keys(state.done).length > 0 &&
+        now - dateAt(state.config.start).getTime() > 7 * 86400000)) &&
+    now - Math.max(backupHistory.exported, backupHistory.snoozed) >
+      7 * 86400000;
   const p = planText(lang);
   const t = text(lang),
     names = bookNames(lang),
@@ -261,7 +290,7 @@ export default function Leseweg() {
   const currentDate = today(state?.config.timezone || "Europe/Berlin");
   const changeLanguage = async (value: Lang) => {
     if (value === lang || pending.current) return;
-    if (!state) {
+    if (!state || !installation.standalone) {
       setLang(value);
       return;
     }
@@ -283,7 +312,7 @@ export default function Leseweg() {
   const totalWords = scoped.reduce((sum, c) => sum + c.words, 0);
   const priorIds = state?.previouslyRead ?? [];
   const previousWords = priorIds.reduce(
-    (sum, id) => sum + chapters[id].words,
+    (sum, id) => sum + chapterInventory[id].words,
     0,
   );
   const previousSeconds = Math.round(previousWords * pace.secondsPerWord);
@@ -309,13 +338,12 @@ export default function Leseweg() {
           ? Math.max(0, Math.floor((now - state.timer.startedAt) / 1000))
           : 0)
       : 0;
-  const completedUnits = planState?.adaptive?.finished.length ?? 0,
-    timedUnits = state
-      ? new Set([
-          ...state.logs.filter((l) => l.seconds > 0).map((l) => l.day),
-          ...(state.timer ? [state.timer.day] : []),
-        ]).size
-      : 0;
+  const completedUnits = sessions.length;
+  const timedSessions = sessions.filter((s) => s.seconds > 0);
+  const timedUnits = timedSessions.length;
+  const averageSession = timedUnits
+    ? timedSessions.reduce((n, s) => n + s.seconds, 0) / timedUnits
+    : 0;
   const fmt = (date: string, long = false) =>
     dateAt(date).toLocaleDateString(locales[lang], {
       timeZone: "UTC",
@@ -323,7 +351,7 @@ export default function Leseweg() {
       month: long ? "long" : "short",
       ...(long ? { year: "numeric" } : {}),
     });
-  const readLabel = (items: typeof chapters) => passage(items, names) || t.rest;
+  const readLabel = (items: Chapter[]) => passage(items, names) || t.rest;
   const choose = (index: number) => {
     setSelected(index);
     setTab("today");
@@ -362,6 +390,18 @@ export default function Leseweg() {
     remainingWords = totalWords - readWords,
     remainingDays = Math.max(0, days.length - dateIndex - 1),
     remainingChapters = scoped.length - doneCount;
+  const sessionSeconds =
+    canRead && !dayDone && state && day
+      ? Math.max(
+          0,
+          seconds -
+            (state.pace?.draft?.day === day.index
+              ? state.pace.draft.secondsBefore
+              : sessions
+                  .filter((s) => s.day === day.index)
+                  .reduce((n, s) => n + s.seconds, 0)),
+        )
+      : seconds;
   const finishingPace = useMemo(() => {
     if (!state || !day || !finishing) return pace;
     try {
@@ -371,6 +411,7 @@ export default function Leseweg() {
           state,
           {
             action: "complete",
+            paceChoice: confirmPace ? "confirmed" : undefined,
             day: day.index,
             planId: state.id,
             opId: crypto.randomUUID(),
@@ -381,9 +422,47 @@ export default function Leseweg() {
     } catch {
       return pace;
     }
-  }, [state, day?.index, finishing, now, pace]);
+  }, [state, day?.index, finishing, now, pace, confirmPace]);
+  const draft = state?.pace?.draft;
+  const pendingSample =
+    state && draft
+      ? {
+          day: draft.day,
+          chapters: Object.keys(state.done)
+            .map(Number)
+            .filter((id) => !draft.before.includes(id)),
+          seconds: Math.max(
+            0,
+            daySeconds(state, draft.day, now) - draft.secondsBefore,
+          ),
+        }
+      : null;
+  const unusual = !!(
+    state &&
+    pendingSample &&
+    sampleNeedsReview(pendingSample, state, pace.secondsPerWord)
+  );
+  const openFinish = async () => {
+    if (!day) return;
+    if (
+      running &&
+      !(await mutate({ action: "timer", mode: "pause", day: day.index }))
+    )
+      return;
+    setConfirmPace(false);
+    setFinishing(true);
+  };
   const finishSession = async () => {
-    if (day && (await mutate({ action: "complete", day: day.index }))) {
+    if (
+      day &&
+      (await mutate({
+        action: "complete",
+        day: day.index,
+        ...(unusual
+          ? { paceChoice: confirmPace ? "confirmed" : "excluded" }
+          : {}),
+      }))
+    ) {
       setFinishing(false);
       setMessage("replanned");
       setSelected(null);
@@ -398,7 +477,7 @@ export default function Leseweg() {
         };
       }
     ).modelContext;
-    if (!context?.registerTool) return;
+    if (!context?.registerTool || !installation.standalone) return;
     const lifecycle = new AbortController();
     try {
       void Promise.resolve(
@@ -441,7 +520,7 @@ export default function Leseweg() {
       ).catch(() => {});
     } catch {}
     return () => lifecycle.abort();
-  }, []);
+  }, [installation.standalone]);
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -469,8 +548,10 @@ export default function Leseweg() {
         </Select>
       </header>
       <main className="workspace">
-        {state && <ChapterCorrection state={state} lang={lang} />}
-        {state?.pendingBookOrder && (
+        {installation.standalone && state && (
+          <ChapterCorrection state={state} lang={lang} />
+        )}
+        {installation.standalone && state?.pendingBookOrder && (
           <p className="notice" role="status">
             {bookOrderText(lang).pending}
           </p>
@@ -528,6 +609,14 @@ export default function Leseweg() {
           <div className="screen-message" role="status">
             {t.loading}
           </div>
+        ) : !installation.standalone ? (
+          <InstallGate
+            lang={lang}
+            state={state}
+            theme={theme}
+            installation={installation}
+            offline={offlineSupport}
+          />
         ) : status === "error" ? (
           <section className="panel screen-message">
             <p>{t.unavailable}</p>
@@ -549,14 +638,12 @@ export default function Leseweg() {
                 {t.cancel}
               </button>
             )}
-            {!state && (
-              <InstallControls
-                lang={lang}
-                offline={offlineSupport}
-                busy={busy}
-              />
-            )}
-            <PlannerForm lang={lang} onSave={saveConfig} busy={busy} />
+            <PlannerForm
+              key={lang}
+              lang={lang}
+              onSave={saveConfig}
+              busy={busy}
+            />
             {!state && (
               <BackupControls
                 state={state}
@@ -588,6 +675,47 @@ export default function Leseweg() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="today">
+              {!state.config.edition && lang !== "de" && (
+                <div className="notice">
+                  <p>{e.legacyEdition}</p>
+                  <button
+                    className="secondary"
+                    onClick={() => setTab("settings")}
+                  >
+                    {t.settings}
+                  </button>
+                </div>
+              )}
+              {backupDue && (
+                <div className="notice backup-reminder">
+                  <p>{e.backupReminder}</p>
+                  <div className="backup-actions">
+                    <button
+                      className="secondary"
+                      onClick={() => setTab("settings")}
+                    >
+                      {e.backupGo}
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() => recordBackup(state.id, "snoozed")}
+                    >
+                      {e.backupLater}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!!state.editionReview?.length && (
+                <div className="warning">
+                  <p>{e.reviewEdition}</p>
+                  <button
+                    className="secondary"
+                    onClick={() => setTab("settings")}
+                  >
+                    {t.settings}
+                  </button>
+                </div>
+              )}
               <div className="page-heading dashboard-heading">
                 <div>
                   <span className="eyebrow">{fmt(currentDate, true)}</span>
@@ -595,7 +723,8 @@ export default function Leseweg() {
                     {doneCount === scoped.length ? t.completePlan : t.welcome}
                   </h1>
                   <p>
-                    {t.edition} · {p[state.config.scope ?? "bible"]}
+                    {editionName(state?.config ?? {})} ·{" "}
+                    {p[state.config.scope ?? "bible"]}
                   </p>
                 </div>
                 <div className="goal-chip">
@@ -657,7 +786,11 @@ export default function Leseweg() {
                       <span>
                         <Clock3 size={15} />
                         {t.approx} {estimate(day.words)} {t.min} ·{" "}
-                        {pace.personal ? t.personalEstimate : t.defaultEstimate}
+                        {pace.personal
+                          ? t.personalEstimate
+                          : pace.learning
+                            ? e.learning
+                            : t.defaultEstimate}
                       </span>
                     )}
                   </div>
@@ -684,10 +817,14 @@ export default function Leseweg() {
                             role="timer"
                             aria-label={t.measured}
                           >
-                            {clockText(seconds)}
+                            {clockText(sessionSeconds)}
                           </span>
                           <span className="timer-caption">
-                            {running ? t.timerRunning : t.timerPaused}
+                            {running
+                              ? t.timerRunning
+                              : canRead && !dayDone
+                                ? t.timerPaused
+                                : e.dailyMeasured}
                           </span>
                           {canRead && !dayDone && (
                             <div className="timer-actions">
@@ -709,29 +846,10 @@ export default function Leseweg() {
                                 )}{" "}
                                 {running
                                   ? t.pause
-                                  : seconds > 0
+                                  : sessionSeconds > 0
                                     ? t.resume
                                     : t.startTimer}
                               </button>
-                              {(running || seconds > 0) && (
-                                <button
-                                  className="secondary"
-                                  disabled={busy}
-                                  onClick={async () => {
-                                    if (
-                                      await mutate({
-                                        action: "timer",
-                                        mode: "stop",
-                                        day: day.index,
-                                      })
-                                    )
-                                      setMessage("stopped");
-                                  }}
-                                >
-                                  <Square size={16} />
-                                  {t.finishTimer}
-                                </button>
-                              )}
                             </div>
                           )}
                         </div>
@@ -802,10 +920,10 @@ export default function Leseweg() {
                           <button
                             className="complete-button"
                             disabled={busy || !!(state.timer && !running)}
-                            onClick={() => setFinishing(true)}
+                            onClick={() => void openFinish()}
                           >
                             <Check size={18} />
-                            {t.finishSession}
+                            {e.finish}
                           </button>
                         </>
                       )}
@@ -999,7 +1117,7 @@ export default function Leseweg() {
               </div>
               <details className="method">
                 <summary>{t.explain}</summary>
-                <p>{t.method}</p>
+                <p>{e.approxWeights}</p>
                 <a
                   href="https://github.com/midvash/bible-data"
                   target="_blank"
@@ -1015,6 +1133,10 @@ export default function Leseweg() {
                 <h1>{t.stats}</h1>
                 <p>{t.statsSub}</p>
               </div>
+              {(!state.sessions ||
+                sessions.some((s) => s.id.startsWith("legacy-"))) && (
+                <p className="fineprint">{e.legacySessions}</p>
+              )}
               <div className="stats-grid">
                 {[
                   [
@@ -1025,9 +1147,7 @@ export default function Leseweg() {
                   ],
                   [
                     t.avgTime,
-                    timedUnits
-                      ? `${Math.round(totalSeconds / timedUnits / 60)}`
-                      : "–",
+                    timedUnits ? `${Math.round(averageSession / 60)}` : "–",
                     t.min,
                     BarChart3,
                   ],
@@ -1087,16 +1207,56 @@ export default function Leseweg() {
                   <h2>{t.paceTitle}</h2>
                 </div>
                 <p className="pace-status">
-                  {pace.personal ? t.personalEstimate : t.defaultEstimate}
+                  {pace.personal
+                    ? t.personalEstimate
+                    : pace.learning
+                      ? e.learning
+                      : t.defaultEstimate}
                 </p>
                 <p className="muted">
-                  {pace.personal
+                  {pace.personal || pace.learning
                     ? t.paceBased
                         .replace("{chapters}", String(pace.chapters))
                         .replace("{time}", clockText(pace.seconds))
                     : t.paceFallback}
                 </p>
-                <p className="muted">{t.paceHelp}</p>
+                <p className="muted">{e.paceHelp}</p>
+                {pace.excluded > 0 && (
+                  <p className="notice">
+                    {e.excluded}: {pace.excluded}
+                  </p>
+                )}
+                <details className="method">
+                  <summary>{e.advanced}</summary>
+                  {state.pace?.samples.map((sample, index) => (
+                    <div className="pace-sample" key={index}>
+                      <p>
+                        {fmt(addDays(state.config.start, sample.day))} ·{" "}
+                        {sample.chapters.length} {t.chapters} ·{" "}
+                        {clockText(sample.seconds)}
+                      </p>
+                      <label>
+                        {e.paceUse}
+                        <select
+                          value={sample.review ?? "auto"}
+                          disabled={busy}
+                          onChange={(ev) =>
+                            void mutate({
+                              action: "review-pace",
+                              index,
+                              seconds: sample.seconds,
+                              review: ev.target.value,
+                            })
+                          }
+                        >
+                          <option value="auto">{e.automatic}</option>
+                          <option value="confirmed">{e.confirmed}</option>
+                          <option value="excluded">{e.excludedChoice}</option>
+                        </select>
+                      </label>
+                    </div>
+                  ))}
+                </details>
               </section>
               <section className="panel chart-panel">
                 <h2>{t.chartTitle}</h2>
@@ -1106,30 +1266,14 @@ export default function Leseweg() {
                 <div className="time-chart">
                   {Array.from({ length: 7 }, (_, i) => {
                     const date = addDays(currentDate, i - 6),
-                      sum =
-                        state.logs
-                          .filter(
-                            (l) =>
-                              todayFor(l.at, state.config.timezone) === date,
-                          )
-                          .reduce((s, l) => s + l.seconds, 0) +
-                        (state.timer && date === currentDate
-                          ? Math.max(0, (now - state.timer.startedAt) / 1000)
-                          : 0),
+                      sum = chartValues[date] ?? 0,
                       max = Math.max(
                         60,
-                        ...Array.from({ length: 7 }, (_, j) =>
-                          state.logs
-                            .filter(
-                              (l) =>
-                                todayFor(l.at, state.config.timezone) ===
-                                addDays(currentDate, j - 6),
-                            )
-                            .reduce((s, l) => s + l.seconds, 0),
+                        ...Array.from(
+                          { length: 7 },
+                          (_, j) =>
+                            chartValues[addDays(currentDate, j - 6)] ?? 0,
                         ),
-                        state.timer
-                          ? Math.max(0, (now - state.timer.startedAt) / 1000)
-                          : 0,
                       );
                     return (
                       <div className="chart-column" key={date}>
@@ -1161,27 +1305,26 @@ export default function Leseweg() {
                 {timedUnits === 0 ? (
                   <p className="muted">{t.noData}</p>
                 ) : (
-                  days
-                    .filter((d) => daySeconds(state, d.index, now) > 0)
-                    .sort((a, b) => b.index - a.index)
+                  [...timedSessions]
+                    .reverse()
                     .slice(0, 10)
                     .map((d) => (
                       <button
                         className="history-row"
-                        key={d.index}
-                        onClick={() => choose(d.index)}
+                        key={d.id}
+                        onClick={() => choose(d.day)}
                       >
                         <span>
-                          {readChaptersOnDay(state, d.index).length
-                            ? readLabel(readChaptersOnDay(state, d.index))
+                          {d.chapters.length
+                            ? readLabel(
+                                d.chapters.map((id) => chapterInventory[id]),
+                              )
                             : t.noReadingLogged}
                           <small>
-                            {t.day} {d.index + 1} · {fmt(d.date)}
+                            {t.day} {d.day + 1} · {fmt(d.date)}
                           </small>
                         </span>
-                        <strong>
-                          {clockText(daySeconds(state, d.index, now))}
-                        </strong>
+                        <strong>{clockText(d.seconds)}</strong>
                       </button>
                     ))
                 )}
@@ -1259,27 +1402,38 @@ export default function Leseweg() {
                     lang={lang}
                   />
                   <hr />
-                  <h3>{t.calendar}</h3>
-                  <p className="muted">{t.calendarSub}</p>
-                  <button
-                    className="secondary full"
-                    disabled={busy || !reminderTime}
-                    onClick={async () => {
-                      const s = await saveSettings();
-                      if (s)
-                        downloadFile(
-                          calendarFile(s, lang, location.origin),
-                          "leseweg.ics",
-                          "text/calendar;charset=utf-8",
-                        );
-                    }}
-                  >
-                    <Download size={17} />
-                    {t.download}
-                  </button>
-                  <p className="fineprint">{t.calendarNote}</p>
+                  <details className="method">
+                    <summary>{t.calendar}</summary>
+                    <p className="muted">{t.calendarSub}</p>
+                    <button
+                      className="secondary full"
+                      disabled={busy || !reminderTime}
+                      onClick={async () => {
+                        const s = await saveSettings();
+                        if (s)
+                          downloadFile(
+                            calendarFile(s, lang, location.origin),
+                            "leseweg.ics",
+                            "text/calendar;charset=utf-8",
+                          );
+                      }}
+                    >
+                      <Download size={17} />
+                      {t.download}
+                    </button>
+                    <p className="fineprint">{t.calendarNote}</p>
+                  </details>
                 </section>
                 <div className="settings-stack">
+                  <EditionControl
+                    state={state}
+                    lang={lang}
+                    busy={busy}
+                    onChange={(edition) =>
+                      mutate({ action: "edition", edition })
+                    }
+                    onReviewed={() => void mutate({ action: "review-edition" })}
+                  />
                   <PlanManagement
                     state={state}
                     lang={lang}
@@ -1314,16 +1468,19 @@ export default function Leseweg() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="fineprint">{t.languageNote}</p>
-                    <BookOrderControl
-                      config={state.config}
-                      lang={lang}
-                      disabled={busy}
-                      pending={state.pendingBookOrder}
-                      onChange={(choice) =>
-                        void mutate({ action: "book-order", choice, lang })
-                      }
-                    />
+                    <p className="fineprint">{e.editionHelp}</p>
+                    <details className="method">
+                      <summary>{e.advanced}</summary>
+                      <BookOrderControl
+                        config={state.config}
+                        lang={lang}
+                        disabled={busy}
+                        pending={state.pendingBookOrder}
+                        onChange={(choice) =>
+                          void mutate({ action: "book-order", choice, lang })
+                        }
+                      />
+                    </details>
                     <label>{t.theme}</label>
                     <Select value={theme} onValueChange={setTheme}>
                       <SelectTrigger aria-label={t.theme} className="w-full">
@@ -1335,13 +1492,16 @@ export default function Leseweg() {
                       </SelectContent>
                     </Select>
                   </section>
-                  <InstallControls
-                    lang={lang}
-                    offline={offlineSupport}
-                    busy={busy}
-                  />
+                  <details className="panel settings-card">
+                    <summary>{t.installTitle}</summary>
+                    <InstallControls
+                      lang={lang}
+                      offline={offlineSupport}
+                      busy={busy}
+                    />
+                  </details>
                   <section className="panel settings-card">
-                    <p className="muted">{t.edition}</p>
+                    <p className="muted">{editionName(state?.config ?? {})}</p>
                     <button
                       className="text-button"
                       onClick={() => setReset(true)}
@@ -1351,7 +1511,7 @@ export default function Leseweg() {
                     </button>
                     <details className="method">
                       <summary>{t.explain}</summary>
-                      <p>{t.method}</p>
+                      <p>{e.approxWeights}</p>
                       <a
                         href="https://github.com/midvash/bible-data"
                         target="_blank"
@@ -1388,11 +1548,54 @@ export default function Leseweg() {
       <AlertDialog open={finishing} onOpenChange={setFinishing}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.finishSession}</AlertDialogTitle>
+            <AlertDialogTitle>{e.finish}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t.finishExplanation} {t.paceFinishHint}
+              {t.finishExplanation}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {unusual && (
+            <div className="warning">
+              <p>{e.outlier}</p>
+              <label className="together-choice">
+                <input
+                  type="checkbox"
+                  checked={confirmPace}
+                  onChange={(ev) => setConfirmPace(ev.target.checked)}
+                />
+                <span>{e.confirmPace}</span>
+              </label>
+            </div>
+          )}
+          <div className="chapter-checklist finish-checklist">
+            {sessionItems.map((c) => (
+              <label className="chapter-row" key={c.id}>
+                <Checkbox
+                  checked={!!doneSet[c.id]}
+                  disabled={busy}
+                  onCheckedChange={(v) =>
+                    void mutate({
+                      action: "chapter",
+                      chapter: c.id,
+                      done: v === true,
+                    })
+                  }
+                />
+                <span>{readLabel([c])}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            className="text-button"
+            disabled={busy}
+            onClick={() => {
+              setFinishing(false);
+              setCorrectMinutes(String(Math.round(seconds / 6) / 10));
+              setEditing(true);
+            }}
+          >
+            <Pencil size={16} />
+            {t.editTime}
+          </button>
           <div className="finish-summary">
             <strong>
               {sessionItems.filter((c) => doneSet[c.id]).length}{" "}

@@ -2,8 +2,62 @@
 
 Ab Version 1.7 wählt die Einrichtung unabhängig voneinander den Umfang
 (gesamte Bibel, AT, NT), die Reihenfolge und den Zeitraum. Sie verwendet
-die 66 Bücher und ab der Korrektur in 1.8.1 die geprüfte Kapitelzählung der Schlachter-2000-Bibel:
-1.189 Kapitel insgesamt, davon 929 im AT und 260 im NT.
+die 66 Bücher der ausgewählten Ausgabe: Schlachter 2000, King James, Synodal
+(66 Bücher) oder Iwan Ohijenko (1962). Jedes Profil hat 1.189 Kapitel insgesamt,
+davon 929 im AT und 260 im NT; die Nummerierung unterscheidet sich.
+
+## Ausgaben ab 1.9
+
+| Menüsprache bei der Einrichtung | Standardausgabe | Joel | Maleachi | Psalmen |
+| --- | --- | --- | --- | --- |
+| Deutsch | Schlachter 2000 | 4 | 3 | Hebräische Zählung |
+| Englisch | King James Version | 3 | 4 | Hebräische Zählung |
+| Russisch | Synodal, protestantische 66-Bücher-Ausgabe | 3 | 4 | Synodal-Zählung |
+| Ukrainisch | Iwan Ohijenko, 1962 | 3 | 4 | Hebräische Zählung der geprüften Ausgabe |
+
+Quellen: [Schlachter](https://www.schlachterbibel.de/de/bibel/),
+[King James](https://only.bible/bible/kjv/),
+[Synodal](https://only.bible/bible/rst66/),
+[Ohijenko](https://only.bible/bible/ubio/); geprüft am 6. Oktober 2026.
+Die unabhängigen Kapitelzahlen stehen in `lib/schlachter-canon.json` und
+`lib/edition-canon.json`. Keine Textabfrage oder Internetverbindung ist zur Planung nötig.
+
+Synodal-Psalm 9 verbindet die hebräischen Psalmen 9–10; 10–112 entsprechen 11–113;
+113 verbindet 114–115; 114/115 teilen 116 an Vers 9/10. 116–145 entsprechen 117–146;
+146/147 teilen 147 an Vers 11/12. 1–8 und 148–150 behalten ihre Zuordnung.
+Primärtextbeispiele: [Psalm 113](https://only.bible/bible/rst66/psa-113/),
+[114](https://only.bible/bible/rst66/psa-114/),
+[146](https://only.bible/bible/rst66/psa-146/),
+[147](https://only.bible/bible/rst66/psa-147/).
+Ohijenko verwendet in der geprüften Ausgabe die hebräische Zählung, siehe
+[Psalm 22](https://only.bible/bible/ubio/psa-22/). Kyrillische Schrift allein bestimmt
+weder Zählung noch Kanon.
+
+Chronologische und zusammenhängende Gruppen werden über diese Inhaltszuordnungen
+in das gewählte Profil übertragen. Zusammengeführte Kapitel stehen beim ersten
+passenden Kontext und werden nicht doppelt gelesen. Alle Kapitel bleiben vollständig;
+der Plan kann keine feinere Verschronologie bieten. Psalm 51 bei Nathan/David wird
+im Synodal-Profil als Psalm 50 bezeichnet. Kapitelgrenzen mit gleicher Kapitelzahl
+können auf Versebene weiterhin leicht variieren; die App arbeitet auf Kapitelebene.
+
+Gewichte sind Näherungen aus Luther 1912, keine exakten Wortzahlen der Übersetzungen.
+Geteilte Psalmen werden anteilig nach Versumfang gewichtet. Alle Einheiten enthalten
+jedes offene Kapitel genau einmal. `tests/editions-experience.mjs` ergänzt 432
+Profil-/Umfang-/Reihenfolge-/Laufzeit-Kombinationen und 36 adaptive Abläufe mit
+Fortschritt, Sicherung und Kapitelprüfung. Umfangreiche Grenzfallprüfungen für die
+Schlachter-Grundlage bleiben in `tests/completeness.mjs` bestehen.
+
+Ältere Pläne ohne Editionskennung bleiben auf ihrer bisherigen Grundlage. Ein
+Sprachwechsel ändert vorhandene Kapitel-IDs nicht. Beim ausdrücklich bestätigten
+Editionswechsel bleiben unveränderte Kapitelreferenzen und vollständig gelesene
+Bücher erhalten. Teilweise gelesene Psalmen, Joel oder Maleachi mit anderer Einteilung
+werden erneut eingeplant und im Prüfhinweis mit ursprünglicher Ausgabe/Referenz genannt.
+Die unveränderte Ausgangslage bleibt lokal unter `before-edition-<Ausgabe>` archiviert.
+Messzeit und Einheiten bleiben erhalten; das Tempotraining startet neu. Dies vermeidet
+scheinbar vollständige Kapitel, deren Inhalt die alte Nummerierung nicht sicher belegt.
+
+Die folgenden Abschnitte dokumentieren auch die früheren Migrationen. Ihre damals
+beschriebenen Einschränkungen zu anderen Ausgaben sind durch die Profile oben ersetzt.
 
 ## Unabhängige Vollständigkeitsprüfung und Korrektur in 1.8.1
 
@@ -63,7 +117,7 @@ Zuordnungen werden weiterhin ab Format 4 abgelehnt.
 Diese Prüfung gilt für die unterstützte 66-Bücher-/Schlachter-Kapitelgrundlage,
 nicht für andere Kanones oder noch nicht implementierte Kapitel-/Psalmzählungen.
 
-## Sprache und gedruckte Buchreihenfolge (ab 1.8)
+## Frühere Buchreihenfolge ohne Editionsprofil (Version 1.8)
 
 Neue Pläne passen die Buchreihenfolge automatisch an die Sprache an:
 Deutsch/Englisch führen nach Apostelgeschichte die Paulusbriefe beginnend mit

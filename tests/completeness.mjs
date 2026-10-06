@@ -367,7 +367,7 @@ for (const version of [1, 2, 3, 4, 5]) {
   assert.deepEqual(restored, migrated, `backup v${version} migration`);
 }
 const newBackup = parseBackup(makeBackup(migrated, "de", "light", now));
-assert.equal(newBackup.version, 6);
+assert.equal(newBackup.version, 7);
 assert.deepEqual(newBackup.state.chapterCorrection, migrated.chapterCorrection);
 const incompleteV6 = JSON.parse(makeBackup(migrated, "de", "light", now));
 delete incompleteV6.state.chapterSchema;
@@ -424,7 +424,7 @@ const persisted = await readState();
 assert.equal(persisted.chapterSchema, 2);
 assertState(persisted, "persisted upgrade");
 const archive = await new Promise((resolve, reject) => {
-  const r = indexedDB.open("leseweg-local", 2);
+  const r = indexedDB.open("leseweg-local", 3);
   r.onerror = () => reject(r.error);
   r.onsuccess = () => {
     const db = r.result,

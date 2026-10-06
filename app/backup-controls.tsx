@@ -1,3 +1,6 @@
+import { useBackupStatus, recordBackup } from "@/lib/backup-status";
+import { experienceText } from "@/lib/experience-i18n";
+import { editionName } from "@/lib/editions";
 import { useState } from "react";
 import { Download, Upload, HardDrive } from "lucide-react";
 import {
@@ -26,15 +29,19 @@ export default function BackupControls({
   lang,
   theme,
   busy,
+  exportOnly = false,
   onRestore,
 }: {
+  exportOnly?: boolean;
   state: ReadingState | null;
   lang: Lang;
   theme: string;
   busy: boolean;
   onRestore: (value: ReadingState, theme: string) => void;
 }) {
-  const t = text(lang);
+  const t = text(lang),
+    e = experienceText(lang),
+    history = useBackupStatus(state?.id ?? null);
   const [backup, setBackup] = useState<Backup | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -43,6 +50,13 @@ export default function BackupControls({
       <HardDrive size={22} />
       <h2 className="mt-3">{t.localData}</h2>
       <p className="muted">{t.localDataSub}</p>
+      {state && (
+        <p className="fineprint">
+          {history.exported
+            ? `${e.lastExport}: ${new Date(history.exported).toLocaleString(locales[lang])}`
+            : e.neverExport}
+        </p>
+      )}
       <div className="backup-actions">
         {state && (
           <button
@@ -59,6 +73,7 @@ export default function BackupControls({
                   `leseweg-sicherung-${new Date().toISOString().slice(0, 10)}.json`,
                   "application/json",
                 );
+                recordBackup(latest.id, "exported");
               } catch {
                 setError(t.backupSaveError);
               } finally {
@@ -70,33 +85,37 @@ export default function BackupControls({
             {t.backupSave}
           </button>
         )}
-        <label className="secondary file-picker">
-          <Upload size={17} />
-          {t.backupLoad}
-          <input
-            type="file"
-            accept=".json,application/json"
-            aria-label={t.backupLoad}
-            disabled={busy || working}
-            onChange={async (e) => {
-              const file = e.currentTarget.files?.[0];
-              e.currentTarget.value = "";
-              if (!file) return;
-              setError("");
-              setWorking(true);
-              try {
-                if (file.size > maxBackupBytes) throw Error();
-                setBackup(parseBackup(await file.text()));
-              } catch {
-                setError(t.backupInvalid);
-              } finally {
-                setWorking(false);
-              }
-            }}
-          />
-        </label>
+        {!exportOnly && (
+          <label className="secondary file-picker">
+            <Upload size={17} />
+            {t.backupLoad}
+            <input
+              type="file"
+              accept=".json,application/json"
+              aria-label={t.backupLoad}
+              disabled={busy || working}
+              onChange={async (e) => {
+                const file = e.currentTarget.files?.[0];
+                e.currentTarget.value = "";
+                if (!file) return;
+                setError("");
+                setWorking(true);
+                try {
+                  if (file.size > maxBackupBytes) throw Error();
+                  setBackup(parseBackup(await file.text()));
+                } catch {
+                  setError(t.backupInvalid);
+                } finally {
+                  setWorking(false);
+                }
+              }}
+            />
+          </label>
+        )}
       </div>
-      <p className="fineprint">{t.backupNote}</p>
+      <p className="fineprint">
+        {t.backupNote} {e.backupCaution}
+      </p>
       {error && (
         <p role="alert" className="error">
           {error}
@@ -118,7 +137,10 @@ export default function BackupControls({
           {backup && (
             <p>
               {new Date(backup.exportedAt).toLocaleDateString(locales[lang])} ·{" "}
-              {Object.keys(backup.state.done).length} {t.chapters} · {t.read}
+              {editionName(backup.state.config)} ·{" "}
+              {Object.keys(backup.state.done).length +
+                (backup.state.previouslyRead?.length ?? 0)}{" "}
+              {t.chapters} · {t.read}
             </p>
           )}
           <AlertDialogFooter>
