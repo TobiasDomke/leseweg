@@ -5,6 +5,9 @@ ChatGPT, ohne Benutzerkonto, ohne Datenbankserver und nach dem ersten vollständ
 Laden auch ohne Internet. Jeder Browser bzw. jede installierte App speichert ihren
 eigenen Plan auf dem jeweiligen Gerät.
 
+[Web-App öffnen und installieren](https://leseweg.pages.dev/) ·
+[Quellcode auf GitHub](https://github.com/TobiasDomke/leseweg)
+
 ## Funktionen
 
 - Dauer in Tagen, Wochen oder Kalendermonaten; 66 Bücher und 1.189 Kapitel.
