@@ -11,6 +11,8 @@ const de = {
   chart: "Stunden:Minuten",
   daily: "pro Tag",
   hours: "Stunden",
+  invalidCorrection:
+    "Bitte gib ganze Zahlen ein: Minuten und Sekunden von 0 bis 59, insgesamt höchstens 24 Stunden.",
   minutes: "Minuten",
   seconds: "Sekunden",
   correction:
@@ -28,6 +30,8 @@ const en: typeof de = {
   chart: "Hours:Minutes",
   daily: "per day",
   hours: "Hours",
+  invalidCorrection:
+    "Enter whole numbers: minutes and seconds from 0 to 59, with a total of no more than 24 hours.",
   minutes: "Minutes",
   seconds: "Seconds",
   correction:
@@ -45,6 +49,8 @@ const ru: typeof de = {
   chart: "Часы:Минуты",
   daily: "в день",
   hours: "Часы",
+  invalidCorrection:
+    "Введите целые числа: минуты и секунды от 0 до 59, суммарно не более 24 часов.",
   minutes: "Минуты",
   seconds: "Секунды",
   correction:
@@ -62,6 +68,8 @@ const uk: typeof de = {
   chart: "Години:Хвилини",
   daily: "на день",
   hours: "Години",
+  invalidCorrection:
+    "Введіть цілі числа: хвилини й секунди від 0 до 59, загалом не більше 24 годин.",
   minutes: "Хвилини",
   seconds: "Секунди",
   correction:

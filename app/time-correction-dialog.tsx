@@ -78,7 +78,7 @@ export default function TimeCorrectionDialog({
           </div>
           {!valid && (
             <p role="alert" className="error">
-              {t.invalid}
+              {d.invalidCorrection}
             </p>
           )}
           <div className="wizard-actions">
