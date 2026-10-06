@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.test-runtime/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+.wrangler/
+.dev.vars
+.dev.vars.*
+coverage/
+backups/
+leseweg-backup-*.json
