@@ -313,6 +313,27 @@ und [Workers-Grenzen](https://developers.cloudflare.com/workers/platform/limits/
 
 ## Entwicklung
 
+### Aktualisierungen für installierte Apps
+
+Nach einem Push nach `main` baut und veröffentlicht Cloudflare Pages die neue
+Web-App. Eine bloße lokale Codeänderung wird noch nicht an Nutzer verteilt.
+Die installierte App prüft beim Start, bei erneuter Internetverbindung und bei
+der Rückkehr in den Vordergrund auf Updates (Vordergrundprüfungen höchstens
+einmal pro Minute). Unter **Einstellungen → Installieren & offline nutzen →
+App aktualisieren → Nach Updates suchen** ist auch eine sofortige Prüfung möglich.
+Ohne Leseplan steht dieser Bereich bereits auf der Startseite.
+
+Ein vollständig geladenes Update wird mit **Jetzt aktualisieren** angeboten.
+Der Klick übernimmt es und lädt die Oberfläche neu. Leseplan, Kapitel,
+Zeitmessungen, Sprache und Push-Anmeldung werden dabei nicht gelöscht; eine
+Neuinstallation ist nicht nötig. Ein laufender Timer läuft mit seiner gespeicherten
+Startzeit weiter. Fehlt Internet oder scheitert ein Download, bleibt die bisherige
+Offlineversion nutzbar. Der Download einer neuen Version benötigt den erreichbaren
+Installationslink; rein lokale Codeänderungen oder ein gelöschter Host können
+keine Updates ausliefern.
+
+### Lokal entwickeln
+
 Getestet mit Node.js 24.19.0 (siehe `.node-version`); mindestens Node.js 22.13.
 Paketversionen sind im Lockfile festgelegt.
 

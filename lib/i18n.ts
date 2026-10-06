@@ -187,6 +187,37 @@ const rows = {
     "A new version of Leseweg is available.",
   ],
   updateNow: ["Jetzt aktualisieren", "Обновить", "Update now"],
+  updatesTitle: ["App aktualisieren", "Обновление приложения", "App updates"],
+  updatesHelp: [
+    "Mit Internet sucht Leseweg beim Öffnen und bei der Rückkehr zur App nach neuen Versionen. Über „Jetzt aktualisieren“ kannst du sie direkt übernehmen. Dein Leseplan, Fortschritt und deine Zeiten bleiben erhalten.",
+    "При подключении к интернету Leseweg проверяет новые версии при открытии приложения и возвращении в него. Нажми «Обновить», чтобы установить готовое обновление. План, прогресс и время чтения сохранятся.",
+    "While online, Leseweg checks for new versions when you open or return to the app. Choose “Update now” to apply a ready update. Your reading plan, progress and recorded times are preserved.",
+  ],
+  checkUpdates: [
+    "Nach Updates suchen",
+    "Проверить обновления",
+    "Check for updates",
+  ],
+  updatesChecking: [
+    "Updates werden geprüft …",
+    "Проверяем обновления …",
+    "Checking for updates …",
+  ],
+  updatesCurrent: [
+    "Deine App ist auf dem neuesten Stand.",
+    "У тебя последняя версия приложения.",
+    "Your app is up to date.",
+  ],
+  updatesOffline: [
+    "Für die Suche nach neuen Updates brauchst du Internet. Deine gespeicherte App funktioniert weiterhin offline.",
+    "Для проверки обновлений нужен интернет. Сохранённое приложение продолжает работать без сети.",
+    "You need an internet connection to check for updates. Your saved app still works offline.",
+  ],
+  updatesFailed: [
+    "Die Update-Prüfung konnte nicht abgeschlossen werden. Deine bisherige App bleibt erhalten. Versuche es später erneut.",
+    "Не удалось завершить проверку обновлений. Текущая версия приложения сохранена. Попробуй позже.",
+    "The update check could not be completed. Your existing app is preserved. Please try again later.",
+  ],
   recommended: [
     "Empfohlene Kapitel",
     "Рекомендуемые главы",

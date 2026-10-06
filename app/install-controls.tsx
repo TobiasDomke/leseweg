@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Smartphone, Check, Download, Share2 } from "lucide-react";
+import { Smartphone, Check, Download, Share2, RefreshCw } from "lucide-react";
 import { text, type Lang } from "@/lib/i18n";
 import {
   storageProtection,
@@ -10,9 +10,11 @@ import type { useOffline } from "@/lib/offline";
 export default function InstallControls({
   lang,
   offline,
+  busy = false,
 }: {
   lang: Lang;
   offline: ReturnType<typeof useOffline>;
+  busy?: boolean;
 }) {
   const t = text(lang);
   const [installed, setInstalled] = useState(false);
@@ -117,6 +119,46 @@ export default function InstallControls({
       </div>
       <p className="fineprint">{t.offlineLimit}</p>
       <p className="fineprint">{t.offlineTest}</p>
+      <hr />
+      <h3>{t.updatesTitle}</h3>
+      <p className="muted">{t.updatesHelp}</p>
+      <div className="backup-actions">
+        <button
+          className="secondary"
+          disabled={offline.updateStatus === "checking"}
+          onClick={() => void offline.checkUpdates()}
+        >
+          <RefreshCw size={17} />
+          {offline.updateStatus === "checking"
+            ? t.updatesChecking
+            : t.checkUpdates}
+        </button>
+        {offline.update && (
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={offline.activate}
+          >
+            <Download size={17} />
+            {t.updateNow}
+          </button>
+        )}
+      </div>
+      {(offline.update || offline.updateStatus !== "idle") && (
+        <p role="status" className="fineprint">
+          {offline.update
+            ? t.updateAvailable
+            : offline.updateStatus === "checking"
+              ? t.updatesChecking
+              : offline.updateStatus === "current"
+                ? t.updatesCurrent
+                : offline.updateStatus === "offline"
+                  ? t.updatesOffline
+                  : offline.updateStatus === "failed"
+                    ? t.updatesFailed
+                    : t.updateAvailable}
+        </p>
+      )}
       {shareUrl ? (
         <>
           <button

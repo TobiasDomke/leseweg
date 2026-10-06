@@ -489,7 +489,13 @@ export default function Leseweg() {
                 {t.cancel}
               </button>
             )}
-            {!state && <InstallControls lang={lang} offline={offlineSupport} />}
+            {!state && (
+              <InstallControls
+                lang={lang}
+                offline={offlineSupport}
+                busy={busy}
+              />
+            )}
             <PlannerForm lang={lang} onSave={saveConfig} busy={busy} />
             {!state && (
               <BackupControls
@@ -1198,7 +1204,11 @@ export default function Leseweg() {
                       </SelectContent>
                     </Select>
                   </section>
-                  <InstallControls lang={lang} offline={offlineSupport} />
+                  <InstallControls
+                    lang={lang}
+                    offline={offlineSupport}
+                    busy={busy}
+                  />
                   <section className="panel settings-card">
                     <p className="muted">{t.edition}</p>
                     <button
