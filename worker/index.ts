@@ -154,29 +154,70 @@ function notification(row: Reminder, env: Env, test: boolean) {
 export async function sendPush(row: Reminder, env: Env, test = false) {
   const subscription = JSON.parse(row.subscription) as Subscription;
   if (!validEndpoint(subscription.endpoint)) return 410;
-  const payload = await buildPushPayload(
-    {
-      data: notification(row, env, test),
-      options: {
-        ttl: test ? 300 : 3600,
-        urgency: "normal",
-        topic: test ? "leseweg-test" : "leseweg-daily",
+  let stage = "encryption";
+  try {
+    const payload = await buildPushPayload(
+      {
+        data: notification(row, env, test),
+        options: {
+          ttl: test ? 300 : 3600,
+          urgency: test ? "high" : "normal",
+          topic: test ? "leseweg-test" : "leseweg-daily",
+        },
       },
-    },
-    subscription,
-    {
-      subject: env.APP_ORIGIN,
-      publicKey: env.VAPID_PUBLIC_KEY,
-      privateKey: env.VAPID_PRIVATE_KEY,
-    },
-  );
-  const response = await fetch(subscription.endpoint, {
-    ...payload,
-    redirect: "error",
-    signal: AbortSignal.timeout(10000),
-  });
-  await response.body?.cancel();
-  return response.status;
+      subscription,
+      {
+        subject: env.APP_ORIGIN,
+        publicKey: env.VAPID_PUBLIC_KEY,
+        privateKey: env.VAPID_PRIVATE_KEY,
+      },
+    );
+    stage = "request";
+    const response = await fetch(subscription.endpoint, {
+      ...payload,
+      // Workers supports manual/follow only. Never forward VAPID credentials
+      // to a redirect target: a 3xx response is handled as a failed delivery.
+      redirect: "manual",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      let reason = "";
+      try {
+        const body = (await response.json()) as { reason?: unknown };
+        if (
+          typeof body.reason === "string" &&
+          /^[A-Za-z0-9_]{1,80}$/.test(body.reason)
+        )
+          reason = body.reason;
+      } catch {
+        /* Providers do not always return a JSON error. */
+      }
+      console.warn("push_delivery_failed", {
+        stage,
+        status: response.status,
+        reason,
+      });
+    } else await response.body?.cancel();
+    return response.status;
+  } catch (error) {
+    let message = error instanceof Error ? error.message : "Unknown error";
+    for (const value of [
+      subscription.endpoint,
+      subscription.keys.auth,
+      subscription.keys.p256dh,
+      env.VAPID_PRIVATE_KEY,
+      env.VAPID_PUBLIC_KEY,
+    ]) {
+      if (value) message = message.split(value).join("[redacted]");
+    }
+    message = message.replace(/https?:\/\/\S+/g, "[redacted]").slice(0, 200);
+    console.warn("push_delivery_failed", {
+      stage,
+      name: error instanceof Error ? error.name : "Error",
+      message,
+    });
+    throw error;
+  }
 }
 
 export async function handleRequest(

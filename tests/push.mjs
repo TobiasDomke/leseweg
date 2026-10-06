@@ -349,8 +349,13 @@ globalThis.fetch = async (url, options) => {
 assert.equal(await sendPush(row(), env, true), 201);
 globalThis.fetch = originalFetch;
 assert.equal(outgoing.url, subscription.endpoint);
-assert.equal(outgoing.options.redirect, "error");
+assert.equal(outgoing.options.redirect, "manual");
 assert.equal(outgoing.options.headers["content-encoding"], "aes128gcm");
+assert.equal(
+  outgoing.options.headers.urgency,
+  "high",
+  "A test notification requests immediate delivery",
+);
 assert.match(outgoing.options.headers.authorization, /^vapid t=/);
 const encrypted = Buffer.from(outgoing.options.body);
 const salt = encrypted.subarray(0, 16),
@@ -390,6 +395,38 @@ assert.equal(payload.notification.navigate, env.APP_ORIGIN + "/");
 assert.equal(payload.notification.title, "Leseweg");
 assert(!JSON.stringify(payload).includes(token));
 assert(!JSON.stringify(payload).includes("subscription"));
+
+// Runtime diagnostics must never expose push endpoints or key material.
+const savedWarn = console.warn;
+const warnings = [];
+console.warn = (...items) => warnings.push(items);
+globalThis.fetch = async () => {
+  throw new Error(
+    [
+      subscription.endpoint,
+      subscription.keys.auth,
+      subscription.keys.p256dh,
+      env.VAPID_PRIVATE_KEY,
+      env.VAPID_PUBLIC_KEY,
+    ].join(" "),
+  );
+};
+try {
+  await assert.rejects(sendPush(row(), env, true));
+  const logged = JSON.stringify(warnings);
+  for (const secret of [
+    subscription.endpoint,
+    subscription.keys.auth,
+    subscription.keys.p256dh,
+    env.VAPID_PRIVATE_KEY,
+    env.VAPID_PUBLIC_KEY,
+  ])
+    assert(!logged.includes(secret));
+  assert(logged.includes('"stage":"request"'));
+} finally {
+  globalThis.fetch = originalFetch;
+  console.warn = savedWarn;
+}
 await request("/subscription", "DELETE");
 assert.equal(count(), 0);
 

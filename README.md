@@ -214,6 +214,14 @@ der gespeicherten Einstellungen werden beim Öffnen dieses Bereichs und online
 an den Dienst übertragen. Bei einem Fehler zeigt die App die zuletzt bestätigte
 Uhrzeit an und bietet einen erneuten Versuch.
 
+Testnachrichten fordern beim Push-Anbieter die sofortige Zustellung an
+(`Urgency: high`). Der Worker verwendet `redirect: manual`, da Cloudflare
+`redirect: error` nicht unterstützt. Antworten mit Weiterleitung gelten als
+fehlgeschlagener Versand; Anmeldedaten werden nicht an andere Adressen
+weitergeleitet. Bei Versandfehlern stehen in einer vorübergehend geöffneten
+Live-Diagnose Status und bereinigte Fehlermeldungen zur Verfügung. Push-Adressen
+und Schlüssel werden entfernt; dauerhafte Worker-Anwendungslogs bleiben aus.
+
 Die Nachricht erinnert allgemein an das Bibellesen. Erst beim Öffnen zeigt die
 App die lokal berechneten Kapitel. Der Dienst kennt weder den Plan noch gelesene
 Kapitel, Lesezeiten oder den Abschluss des Plans. Erinnerungen laufen täglich
