@@ -169,6 +169,14 @@ export default function Leseweg() {
   }, [lang]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute(
+        "content",
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--theme-color")
+          .trim(),
+      );
     try {
       localStorage.setItem("leseweg-theme", theme);
     } catch {}

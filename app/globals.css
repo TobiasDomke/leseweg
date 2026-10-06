@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 :root {
+  color-scheme: light;
   --background: #f3f6f7;
   --foreground: #173d37;
   --card: #fff;
@@ -20,27 +21,44 @@
   --input: #dce5e0;
   --ring: #518975;
   --destructive: #a33035;
+  --theme-color: #174e43;
+  --preview-background: #174e43;
+  --preview-foreground: #fff;
+  --preview-muted: #bfd6ca;
+  --preview-border: #497164;
+  --preview-marker: #2a6052;
+  --warning-background: #fff1cf;
+  --warning-foreground: #714d15;
   --radius: 0.8rem;
 }
 :root[data-theme="dark"] {
-  --background: #0f201d;
-  --foreground: #e6f0e9;
-  --card: #172d27;
-  --card-foreground: #e6f0e9;
-  --popover: #172d27;
-  --popover-foreground: #e6f0e9;
-  --primary: #9bdfba;
-  --primary-foreground: #10271f;
-  --secondary: #233b32;
-  --secondary-foreground: #e6f0e9;
-  --muted: #233b32;
-  --muted-foreground: #a4b9ad;
-  --accent: #274939;
-  --accent-foreground: #e6f0e9;
-  --border: #345044;
-  --input: #345044;
-  --ring: #9bdfba;
+  color-scheme: dark;
+  --background: #191c1b;
+  --foreground: #eeefe8;
+  --card: #242927;
+  --card-foreground: #eeefe8;
+  --popover: #242927;
+  --popover-foreground: #eeefe8;
+  --primary: #adccaf;
+  --primary-foreground: #19241c;
+  --secondary: #2e3530;
+  --secondary-foreground: #eeefe8;
+  --muted: #2e3530;
+  --muted-foreground: #b3bcb5;
+  --accent: #344237;
+  --accent-foreground: #eeefe8;
+  --border: #3e4842;
+  --input: #3e4842;
+  --ring: #adccaf;
   --destructive: #ff999e;
+  --theme-color: #191c1b;
+  --preview-background: #242927;
+  --preview-foreground: #eeefe8;
+  --preview-muted: #b3bcb5;
+  --preview-border: #3e4842;
+  --preview-marker: #344237;
+  --warning-background: #393125;
+  --warning-foreground: #e5c895;
 }
 @theme inline {
   --color-background: var(--background);
@@ -141,8 +159,8 @@ h3 {
   letter-spacing: -0.05em;
 }
 .brand-mark {
-  background: #174e43;
-  color: white;
+  background: var(--primary);
+  color: var(--primary-foreground);
   width: 42px;
   height: 42px;
   display: grid;
@@ -289,12 +307,12 @@ input:focus {
 }
 .preview-panel {
   padding: 32px;
-  background: #174e43;
+  background: var(--preview-background);
   border-radius: 22px;
-  color: #fff;
+  color: var(--preview-foreground);
 }
 .preview-panel .eyebrow {
-  color: #bfd6ca;
+  color: var(--preview-muted);
 }
 .time-estimate {
   display: flex;
@@ -315,14 +333,14 @@ input:focus {
 }
 .time-estimate small {
   font-size: 0.8rem;
-  color: #bfd6ca;
+  color: var(--preview-muted);
 }
 .preview-stats {
   display: grid;
   gap: 13px;
   font-size: 0.9rem;
   padding-bottom: 26px;
-  border-bottom: 1px solid #497164;
+  border-bottom: 1px solid var(--preview-border);
 }
 .preview-stats > div {
   display: flex;
@@ -340,7 +358,7 @@ input:focus {
 }
 .preview-day > span {
   font-size: 0.8rem;
-  background: #2a6052;
+  background: var(--preview-marker);
   border-radius: 50%;
   width: 35px;
   height: 35px;
@@ -355,7 +373,7 @@ input:focus {
 .preview-day small {
   display: block;
   font-size: 0.8rem;
-  color: #bfd6ca;
+  color: var(--preview-muted);
 }
 .fineprint {
   font-size: 0.78rem;
@@ -364,7 +382,7 @@ input:focus {
   color: var(--muted-foreground);
 }
 .preview-panel .fineprint {
-  color: #bfd6ca;
+  color: var(--preview-muted);
 }
 .error {
   color: var(--destructive);
@@ -379,8 +397,8 @@ input:focus {
 .warning {
   padding: 14px;
   border-radius: 10px;
-  background: #fff1cf;
-  color: #714d15;
+  background: var(--warning-background);
+  color: var(--warning-foreground);
   margin-bottom: 15px;
   font-size: 0.88rem;
 }
