@@ -1345,3 +1345,6 @@ small {
 .install-card .backup-actions {
   flex-wrap: wrap;
 }
+/* The optional push service never receives the local reading plan. */
+.push-controls h3 { display: flex; align-items: center; gap: 8px; }
+.push-controls .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }

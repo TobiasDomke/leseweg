@@ -1,6 +1,6 @@
 {
   "name": "leseweg",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,9 +8,12 @@
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
-    "build": "tsc --noEmit && vite build && node scripts/build-offline.mjs",
+    "build": "tsc --noEmit && tsc --noEmit -p worker/tsconfig.json && vite build && node scripts/build-offline.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 5174 --strictPort",
-    "test": "node tests/planner.mjs && node tests/local-state.mjs && node tests/adaptive.mjs && node tests/pace.mjs && node tests/offline.mjs && node tests/device-storage.mjs"
+    "test": "node tests/planner.mjs && node tests/local-state.mjs && node tests/adaptive.mjs && node tests/pace.mjs && node tests/offline.mjs && node tests/device-storage.mjs && node tests/push.mjs",
+    "push:keys": "node scripts/generate-push-keys.mjs",
+    "push:deploy": "wrangler deploy --config worker/wrangler.jsonc",
+    "push:migrate": "wrangler d1 migrations apply leseweg-erinnerungen --remote --config worker/wrangler.jsonc"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",
@@ -23,16 +26,19 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
+    "@cloudflare/workers-types": "5.20261006.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
-    "esbuild": "0.28.0",
+    "esbuild": "0.28.2",
     "fake-indexeddb": "6.2.5",
     "tailwindcss": "4.2.1",
     "tw-animate-css": "1.4.0",
     "typescript": "5.9.3",
-    "vite": "8.0.13"
+    "vite": "8.3.3",
+    "wrangler": "4.147.0"
   }
 }

@@ -1,9 +1,10 @@
 # Leseweg – unabhängige Web-App
 
 Installierbarer Bibelleseplan für eine Papierbibel. Die Anwendung läuft ohne
-ChatGPT, ohne Benutzerkonto, ohne Datenbankserver und nach dem ersten vollständigen
-Laden auch ohne Internet. Jeder Browser bzw. jede installierte App speichert ihren
-eigenen Plan auf dem jeweiligen Gerät.
+ChatGPT, ohne Benutzerkonto und nach dem ersten vollständigen Laden auch ohne
+Internet. Jeder Browser bzw. jede installierte App speichert ihren eigenen Plan
+auf dem jeweiligen Gerät. Optionale Push-Erinnerungen benötigen zusätzlich einen
+Erinnerungsdienst und Internet; der Leseplan selbst benötigt keinen Server.
 
 [Web-App öffnen und installieren](https://leseweg.pages.dev/) ·
 [Quellcode auf GitHub](https://github.com/TobiasDomke/leseweg)
@@ -24,6 +25,8 @@ eigenen Plan auf dem jeweiligen Gerät.
 - Kalenderexport mit Kapiteln, gewählter Uhrzeit und Zeitzone einschließlich Sommerzeit.
 - JSON-Sicherung und Wiederherstellung, auch auf einem anderen Gerät.
 - Offlinebetrieb, Startbildschirmsymbol und Updates mit Nutzerbestätigung.
+- Optionale tägliche Push-Erinnerungen mit Zeitzone, Testnachricht und Ausschalter
+  pro Gerät, sobald der Betreiber den Erinnerungsdienst eingerichtet hat.
 
 Die Wortzahlen stammen aus der gemeinfreien Lutherbibel 1912
 ([Datenquelle](https://github.com/midvash/bible-data)). Sie dienen als Näherung
@@ -83,7 +86,8 @@ Browserspeicher: Daten vorher sichern und an der neuen Adresse importieren.
 
 Nach `npm ci && npm run build` den vollständigen Inhalt von `dist/` im Hauptverzeichnis eines beliebigen
 statischen HTTPS-Hostings ablegen. Keine Weiterleitung zur ChatGPT-Site und keine
-API- oder Serverkonfiguration sind erforderlich. `_headers` setzt auf Cloudflare
+API- oder Serverkonfiguration sind für den Leseplan erforderlich. Der optionale
+Push-Dienst wird separat eingerichtet (siehe unten). `_headers` setzt auf Cloudflare
 Pages/Netlify Cache- und Sicherheitsheader; andere Anbieter können dieselben
 Header über ihre Konfiguration setzen. Service Worker und HTML sollten erneut
 validiert werden, Dateien in `assets/` dürfen langfristig gecacht werden.
@@ -190,14 +194,106 @@ aufbewahrt. Eine unbegrenzte Aufbewahrung ist keine garantierte PWA-Eigenschaft.
   herunterladen, insbesondere vor Gerätewechsel, Löschen der App oder Websitedaten.
 - Ein exportierter laufender Timer wird in der Sicherung zum Exportzeitpunkt
   pausiert. In der geöffneten App läuft er weiter.
-- Direkte tägliche Push-Mitteilungen sind noch nicht implementiert. Eine geschlossene
-  iPhone-PWA bietet keine zuverlässige rein lokale Terminbenachrichtigung. Der
-  Kalenderexport ist die verfügbare Alternative. Bei Planänderungen alte importierte
-  Termine entfernen und den aktualisierten Kalender importieren.
+- Push-Erinnerungen benötigen den optionalen Cloudflare-Dienst sowie die
+  Push-Infrastruktur des Browsers. Sie funktionieren nicht vollständig offline.
+  Der Kalenderexport bleibt eine separate Möglichkeit. Bei Planänderungen alte
+  importierte Termine entfernen und den aktualisierten Kalender importieren.
 - Keine Analytik, externen Schriftarten oder Datenübertragung für Lesepläne.
   Der Hosting-Anbieter erhält beim Abruf der App die üblichen HTTP-Anfragen.
 - Der alte ChatGPT-Lesestand wird nicht automatisch übernommen. Dieses Projekt
   greift bewusst nicht auf die bisherige Datenbank zu.
+
+## Update 1.4: optionale Push-Erinnerungen
+
+Unter **Einstellungen → Push-Erinnerung auf diesem Gerät** zunächst die Uhrzeit
+und Zeitzone speichern, dann **Erinnerungen aktivieren** und die Systemabfrage
+bestätigen. Auf iPhone/iPad muss die App vom Home-Bildschirm geöffnet werden.
+**Testnachricht senden** prüft die Zustellung; diese Aktion ist einmal pro Minute
+möglich. Die Erlaubnis muss auf jedem Gerät separat erteilt werden. Änderungen
+der gespeicherten Einstellungen werden beim Öffnen dieses Bereichs und online
+an den Dienst übertragen. Bei einem Fehler zeigt die App die zuletzt bestätigte
+Uhrzeit an und bietet einen erneuten Versuch.
+
+Die Nachricht erinnert allgemein an das Bibellesen. Erst beim Öffnen zeigt die
+App die lokal berechneten Kapitel. Der Dienst kennt weder den Plan noch gelesene
+Kapitel, Lesezeiten oder den Abschluss des Plans. Erinnerungen laufen täglich
+weiter, bis sie auf dem jeweiligen Gerät ausgeschaltet werden.
+
+**Datenspeicherung:** Erst beim Aktivieren speichert Cloudflare D1 die technische
+Push-Adresse und ihre Verschlüsselungsparameter, Uhrzeit, Zeitzone, Sprache sowie
+Versandstatus. Ein zufälliger geheimer Geräteschlüssel bleibt in localStorage;
+der Dienst speichert nur seinen Hash. Er berechtigt ausschließlich zur Verwaltung
+dieser einen Anmeldung. Lesesicherungen enthalten diesen Schlüssel nicht, beim
+Gerätewechsel werden Erinnerungen separat aktiviert. Die Push-Nachrichten sind
+für den jeweiligen Browser verschlüsselt. Cloudflare erhält bei API-Aufrufen die
+üblichen Verbindungsdaten; zur Begrenzung von Anfragen wird die IP-Adresse im
+Worker gehasht und nicht in D1 gespeichert. Worker-Anwendungslogs sind deaktiviert.
+
+Beim Ausschalten wird zunächst die Browser-Anmeldung aufgehoben und anschließend
+der Servereintrag entfernt. Ohne Internet bleibt ein Löschauftrag lokal gespeichert;
+er wird beim nächsten Online-Aufruf der Push-Einstellungen nachgeholt. Vom
+Push-Anbieter als abgelaufen gemeldete Anmeldungen werden ebenfalls gelöscht.
+Vor dem Löschen der App oder ihrer Websitedaten deshalb Erinnerungen ausschalten.
+
+**Betrieb:** Ein Cloudflare Worker prüft minütlich fällige Erinnerungen. Zeitzonen
+und Sommerzeit werden berücksichtigt. Doppelte parallele Versandläufe werden
+per Datenbankreservierung abgefangen. Vorübergehende Fehler werden begrenzt
+wiederholt; stark verspätete Erinnerungen werden übersprungen. Die erste kleine
+Ausbaustufe verarbeitet höchstens fünf Anmeldungen pro Minute und akzeptiert
+höchstens 1.000 Anmeldungen insgesamt. Größere Gruppen zur gleichen Uhrzeit führen
+zu Verzögerungen. Auch Fokusmodus, Verbindung und Betriebssystem beeinflussen die
+Zustellung. Es gibt keine Zusage einer sekundengenauen oder garantierten Zustellung.
+
+Die Bereitstellung nutzt Workers und D1 im kostenlosen Tarif. Es wird kein
+Bezahlabo angelegt. Bei ausgeschöpften Gratisgrenzen kann der Dienst ausfallen;
+der lokale Leseplan funktioniert weiter. Für verlässlich größere Nutzerzahlen
+müssen Auslastung und Versandkapazität neu bewertet werden.
+
+### Push-Dienst als Betreiber einrichten
+
+Dieses Repository ist auf `https://leseweg.pages.dev` und den Worker
+`https://leseweg-erinnerungen.tobidom01.workers.dev` eingestellt. Die Datenbank
+`leseweg-erinnerungen` wurde mit der EU-Jurisdiktion angelegt. Ohne hinterlegte
+VAPID-Secrets zeigt die App den Dienst als noch nicht freigeschaltet. Die
+folgenden Schritte dokumentieren die Ersteinrichtung und gelten auch für einen
+eigenen Fork mit entsprechend ersetzten Adressen und Datenbank-ID:
+
+1. Im Repository `npm ci` ausführen. Mit
+   `npx wrangler login --scopes account:read user:read workers_scripts:write d1:write`
+   Cloudflares offizielles Werkzeug autorisieren. Diese OAuth-Schreibrechte gelten
+   kontoweit für Workers und D1, nicht nur für dieses Projekt.
+2. Mit `npx wrangler d1 create leseweg-erinnerungen --jurisdiction eu` eine D1-Datenbank in der EU erstellen.
+   Ihre zurückgegebene ID in `worker/wrangler.jsonc` eintragen. Dort auch
+   `APP_ORIGIN` auf die endgültige HTTPS-Adresse der App setzen, ohne abschließenden
+   Schrägstrich. Danach `npm run push:migrate` ausführen.
+3. Einmalig `npm run push:keys` ausführen. Die privaten Schlüssel liegen ausschließlich
+   in der ignorierten Datei `.secrets/push-secrets.json`. Diese Datei sicher sichern
+   und nie veröffentlichen. Das Skript überschreibt vorhandene Schlüssel nicht.
+4. `npm run push:deploy` ausführen. Danach
+   `npx wrangler secret bulk .secrets/push-secrets.json --config worker/wrangler.jsonc`
+   verwenden, um die Schlüssel als Cloudflare-Secrets zu hinterlegen. Ohne die
+   Secrets akzeptiert der Dienst keine neuen Anmeldungen.
+5. Die ausgegebene `https://…workers.dev`-Adresse ohne abschließenden Schrägstrich
+   in `lib/push-config.ts` als `PUSH_API` eintragen und als zusätzliche erlaubte
+   Quelle bei `connect-src` in `public/_headers` aufnehmen. Die Worker-Adresse
+   ist öffentlich, die privaten Schlüssel bleiben ausschließlich beim Worker.
+6. `npm run build && npm test` ausführen und die Änderungen über Git veröffentlichen.
+   Die Pages-Git-Integration aktualisiert die Oberfläche. Spätere Änderungen am
+   Worker werden gesondert mit `npm run push:deploy` veröffentlicht; sie werden
+   durch den Pages-Build nicht automatisch bereitgestellt.
+7. In einer installierten App das Update übernehmen, Mitteilungen aktivieren und
+   eine Testnachricht bei geschlossener App prüfen. Danach eine tägliche Erinnerung
+   zu einer nahen Uhrzeit testen. Ein echter Gerätetest ist zusätzlich zu den
+   automatisierten Tests erforderlich.
+
+Privater VAPID-Schlüssel und Datenbank müssen bei späteren Worker-Updates erhalten
+bleiben. Ein Schlüsselwechsel erfordert neue Browser-Anmeldungen. Wer den Dienst
+abschaltet oder löscht, beendet die Push-Erinnerungen; bereits gespeicherte lokale
+Lesepläne und Kalendertermine bleiben davon unabhängig.
+
+[Web Push auf Apple-Geräten](https://webkit.org/blog/16535/meet-declarative-web-push/),
+[Cloudflare-Cron](https://developers.cloudflare.com/workers/configuration/cron-triggers/)
+und [Workers-Grenzen](https://developers.cloudflare.com/workers/platform/limits/).
 
 ## Entwicklung
 
@@ -239,6 +335,13 @@ fehlgeschlagene Schreibvorgänge, Sicherungsvalidierung und Offline-Dateien.
 Zusätzlich: persönliche Gewichtung, mehrere Einheiten am selben Tag, Pausen,
 fehlende Messungen, Zeitkorrekturen, Mitternacht, Übernahme alter Messungen und
 personalisierte Exportzeiten.
+
+Die Push-Tests verwenden eine echte lokale SQLite-Datenbank und prüfen Geräteisolation,
+Anmeldungen, Eingabevalidierung, erlaubte Push-Anbieter, Ratenbegrenzung, Zeitzonen,
+Sommerzeit, parallelen Versand, Wiederholungen, abgelaufene Anmeldungen und Löschen.
+Ein unabhängiger Test entschlüsselt die tatsächlich erzeugte Web-Push-Nachricht
+und prüft den Inhalt; Service-Worker-Tests prüfen Anzeige und Öffnen der App.
+Ein Cloudflare-Dry-Run prüft zusätzlich das Worker-Paket und seine Bindings.
 
 Im Desktop-Browser zusätzlich geprüft: Plan ohne Anmeldung erstellen; Webserver
 abschalten; App neu laden; Kapitel abhaken und Timer stoppen; erneut neu laden

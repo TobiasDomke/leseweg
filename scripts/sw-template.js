@@ -69,3 +69,30 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+self.addEventListener("push", (event) => {
+  // Safari displays immutable Declarative Web Push itself. Other browsers use
+  // the same encrypted payload through this standard service-worker handler.
+  if (event.notification) return;
+  let notification;
+  try { notification = event.data?.json()?.notification; } catch {}
+  event.waitUntil(self.registration.showNotification("Leseweg", {
+    body: typeof notification?.body === "string" ? notification.body : "Zeit zum Bibellesen. Öffne Leseweg für deine heutigen Kapitel.",
+    icon: "/icon-192.png",
+    tag: notification?.tag === "leseweg-test" ? "leseweg-test" : "leseweg-daily",
+    lang: ["de", "ru", "en"].includes(notification?.lang) ? notification.lang : "de",
+    data: { url: self.location.origin + "/" },
+  }));
+});
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const url = self.location.origin + "/";
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
+    if (existing) {
+      await existing.navigate(url);
+      await existing.focus();
+    } else await self.clients.openWindow(url);
+  })());
+});

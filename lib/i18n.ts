@@ -406,11 +406,6 @@ const rows = {
     "Экспорт календаря — снимок плана. После пересчёта удали старые события и импортируй новый файл. События не обновляются автоматически.",
     "The calendar export is a snapshot. After your plan changes, remove old events and import a new file. Events do not update automatically.",
   ],
-  pushPending: [
-    "Direkte Push-Mitteilungen aus der Web-App sind noch nicht eingerichtet. Der Kalender ist eine separate Erinnerungsmöglichkeit.",
-    "Push-уведомления веб-приложения пока не настроены. Календарь — отдельный способ напоминаний.",
-    "Direct push notifications from the web app are not set up yet. Calendar alerts are a separate reminder option.",
-  ],
   language: ["Sprache", "Язык", "Language"],
   languageNote: [
     "Die Sprache ändert die Oberfläche und Buchnamen, nicht die Kapitelzählung deiner Schlachter-2000-Papierbibel.",

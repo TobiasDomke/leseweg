@@ -1,0 +1,25 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "leseweg-erinnerungen",
+  "main": "index.ts",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": true,
+  "observability": { "enabled": false },
+  "vars": { "APP_ORIGIN": "https://leseweg.pages.dev" },
+  "triggers": { "crons": ["* * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "leseweg-erinnerungen",
+      "database_id": "e28c9740-2f92-48d7-91fe-8e5ff9ae5977",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "API_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 },
+    },
+  ],
+}

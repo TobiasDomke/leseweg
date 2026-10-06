@@ -69,6 +69,7 @@ import { readState, changeState } from "@/lib/local-storage";
 import { useOffline } from "@/lib/offline";
 import BackupControls from "./backup-controls";
 import InstallControls from "./install-controls";
+import PushControls from "./push-controls";
 import {
   prepareState,
   readingPlan,
@@ -1128,6 +1129,8 @@ export default function Leseweg() {
                     </button>
                   </form>
                   <hr />
+                  <PushControls time={state.config.time} timezone={state.config.timezone} lang={lang} />
+                  <hr />
                   <h3>{t.calendar}</h3>
                   <p className="muted">{t.calendarSub}</p>
                   <button
@@ -1147,7 +1150,6 @@ export default function Leseweg() {
                     {t.download}
                   </button>
                   <p className="fineprint">{t.calendarNote}</p>
-                  <p className="push-status">{t.pushPending}</p>
                 </section>
                 <div className="settings-stack">
                   <BackupControls

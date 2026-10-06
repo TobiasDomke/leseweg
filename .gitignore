@@ -12,3 +12,5 @@ dist/
 coverage/
 backups/
 leseweg-backup-*.json
+.secrets/
+worker/.wrangler/
